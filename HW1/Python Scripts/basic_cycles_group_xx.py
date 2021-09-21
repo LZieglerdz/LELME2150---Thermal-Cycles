@@ -148,7 +148,8 @@ def steam_turbine(T_1,p_3,T_3,eta_gen,LHV,P_el,eta_mec_t,eta_is_t,eta_pump):
     
     #State 2: Sub-cooled water (1->2 supposed isothermal, 2->3 supposed isobaric)
     p_2 = p_3
-    T_2 = T_1
+    rho = CP.PropsSI('D','T',T_1,'P',p_1,'Water')
+    T_2 = T_1 + (p_2-p_1)*(1/eta_pump -1)/(rho*CP.PropsSI('C','P',p_1,'T',T_1,'Water'))
     h_2 = CP.PropsSI('H','P',p_2,'T',T_2,'Water')
     s_2 = CP.PropsSI('S','P',p_2,'T',T_2,'Water')
     x_2 = CP.PropsSI('Q','P',p_2,'T',T_2,'Water')
