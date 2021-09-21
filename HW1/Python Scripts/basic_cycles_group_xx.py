@@ -139,14 +139,71 @@ gas_turbine(p_1,T_1,p_2,p_3,T_3,eta_pi,eta_mec_c,eta_mec_t)
 #
 
 def steam_turbine(T_1,p_3,T_3,eta_gen,LHV,P_el,eta_mec_t,eta_is_t,eta_pump):
-    # Replace with your model
-    p_1, p_2, p_3, p_4 = 0, 0, 0, 0
-    T_1, T_2, T_3, T_4 = 0, 0, 0, 0
-    s_1, s_2, s_3, s_4 = 0, 0, 0, 0
-    h_1, h_2, h_3, h_4 = 0, 0, 0, 0
-    x_1, x_2, x_3, x_4 = 0, 0, 0, 0
-    eta_en = 0
-    dot_m_f = 0
+   #State 1: Saturated liquid
+    T_1 = T_1
+    x_1 = 0  
+    p_1 = CP.PropsSI('P','T',T_1,'Q',0,'Water')
+    h_1 = CP.PropsSI('H','P',p_1,'Q',0,'Water')
+    s_1 = CP.PropsSI('S','P',p_1,'Q',0,'Water')
+    
+    #State 2: Sub-cooled water (1->2 supposed isothermal, 2->3 supposed isobaric)
+    p_2 = p_3
+    T_2 = T_1
+    h_2 = CP.PropsSI('H','P',p_2,'T',T_2,'Water')
+    s_2 = CP.PropsSI('S','P',p_2,'T',T_2,'Water')
+    x_2 = CP.PropsSI('Q','P',p_2,'T',T_2,'Water')
+    
+    #State 3:
+    p_3 = p_3
+    T_3 = T_3
+    h_3 = CP.PropsSI('H','P',p_3,'T',T_3,'Water')
+    s_3 = CP.PropsSI('S','P',p_3,'T',T_3,'Water')
+    x_3 = CP.PropsSI('Q','P',p_3,'T',T_3,'Water')
+    
+    #State 4_si: (Isentropic expansion from 3->4_si) 
+    p_4_si = p_1 # 4_si->1 : isobaric condensation 
+    T_4_si = T_1
+    s_4_si = s_3
+    s_4_si_satLiq = CP.PropsSI('S','P',p_4_si,'Q',0,'Water')
+    s_4_si_satVap = CP.PropsSI('S','P',p_4_si,'Q',1,'Water')
+    x_4_si = (s_4_si - s_4_si_satLiq)/(s_4_si_satVap - s_4_si_satLiq)
+    h_4_si_satLiq = CP.PropsSI('H','P',p_4_si,'Q',0,'Water')
+    h_4_si_satVap = CP.PropsSI('H','P',p_4_si,'Q',1,'Water')
+    h_4_si = x_4_si*h_4_si_satVap + (1-x_4_si)*h_4_si_satLiq
+    
+    #State 4: (Adiabatic expansion from 3->4)
+    p_4 = p_1
+    T_4 = T_1
+    h_4 = h_3 + eta_is_t*(h_4_si - h_3)
+    h_4_satLiq = CP.PropsSI('H','P',p_4,'Q',0,'Water')
+    h_4_satVap = CP.PropsSI('H','P',p_4,'Q',1,'Water')
+    x_4 = (h_4 - h_4_satLiq)/(h_4_satVap - h_4_satLiq)
+    s_4_satLiq = CP.PropsSI('S','P',p_4,'Q',0,'Water')
+    s_4_satVap = CP.PropsSI('S','P',p_4,'Q',1,'Water')
+    s_4 = x_4*s_4_satVap + (1-x_4)*s_4_satLiq
+    
+    #Mechanical work of the turbine:
+    wm_t = (h_4 - h_3)
+    
+    #Overall efficiency of the cycle:
+    eta_th = (h_3 - h_4)/(h_3 - h_2)
+    
+    eta_en = eta_mec_t*eta_th*eta_gen
+    
+    #Water flow in the cycle:
+    dot_m_v = P_el/(eta_mec_t*(h_3-h_4-h_2+h_1))
+    
+    #Mass flow of coal used:
+    dot_m_c = dot_m_v*(h_3 - h_2)/(eta_gen*LHV)
+    
+    #Minimum water flow used at the condenser:
+    dT_w = 8 # inlet temperature of 8°C when entering the condenser
+    dot_m_w = dot_m_v*(h_4 - h_1)/(CP.PropsSI('C','P',101325,'T',288.15,'Water')*dT_w)
+    
+    ##?
+    dot_m_f = dot_m_v
+    
+    
     # Final outputs - do not modify
     p = (p_1, p_2, p_3, p_4)
     T = (T_1, T_2, T_3, T_4)
