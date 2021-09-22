@@ -95,22 +95,6 @@ def gas_turbine(p_1,T_1,p_2,p_3,T_3,eta_pi,eta_mec_c,eta_mec_t):
     eta_gen = 1
     eta_en = eta_cyclen*eta_mec*eta_gen
 
-    # print('     | p\t| T \t\t| s-s1\t\t| h-h1')
-    # print('     | [kPa]\t| [K] \t\t| [kJ/kg.K]\t| [kJ/kg]')
-    # print(75*'-')
-    # print('  1  | %.2f\t| %.2f \t| %.2f \t\t| %.2f ' %(p_1/1000, T_1, s_1/1000, h_1/1000))
-    # print('  2  | %.2f\t| %.2f \t| %.2f \t\t| %.2f ' %(p_2/1000, T_2, s_2/1000, h_2/1000))
-    # print('  3  | %.2f\t| %.2f \t| %.2f \t\t| %.2f ' %(p_3/1000, T_3, s_3/1000, h_3/1000))
-    # print('  4  | %.2f\t| %.2f \t| %.2f \t\t| %.2f ' %(p_4/1000, T_4, s_4/1000, h_4/1000))
-    # print(75*'-')
-    # print('eta_pi : %.2f' %eta_pi)
-    # print('eta_mec_c : %.2f' %eta_mec_c)
-    # print('W : %.2f' %W)
-    # print('Q : %.2f' %Q)
-    # print('eta_en : %.2f' %eta_en)
-    # print(75*'_')
-    # print('\n')
-
     # Final outputs - do not modify
     p = (p_1, p_2, p_3, p_4)
     T = (T_1, T_2, T_3, T_4)
@@ -169,7 +153,7 @@ def steam_turbine(T_1,p_3,T_3,eta_gen,LHV,P_el,eta_mec_t,eta_is_t,eta_pump):
     s_4 = x_4*s_4_satVap + (1-x_4)*s_4_satLiq
 
     #Mechanical work of the turbine:
-    wm_t = (h_4 - h_3)
+    wm_t = (h_3 - h_4)
 
     #Overall efficiency of the cycle:
     eta_th = (h_3 - h_4)/(h_3 - h_2)
@@ -186,9 +170,8 @@ def steam_turbine(T_1,p_3,T_3,eta_gen,LHV,P_el,eta_mec_t,eta_is_t,eta_pump):
     dT_w = 8 # inlet temperature of 8°C when entering the condenser
     dot_m_w = dot_m_v*(h_4 - h_1)/(CP.PropsSI('C','P',101325,'T',288.15,'Water')*dT_w)
 
-    ##?
+    ##
     dot_m_f = dot_m_v
-
 
     # Final outputs - do not modify
     p = (p_1, p_2, p_3, p_4)
