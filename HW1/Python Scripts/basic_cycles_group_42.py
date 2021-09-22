@@ -4,8 +4,8 @@ Homework 1 - Basic cycles
 
 Signatures of the functions for the homework
 
-@author: Antoine Laterre
-@date: September 10, 2021
+@author: Ziegler de Ziegleck aùf Rheingrüb Laurent, Boterberg Dimitri
+@date: September 22, 2021
 """
 
 #
