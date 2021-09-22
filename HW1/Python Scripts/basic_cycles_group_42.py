@@ -48,13 +48,16 @@ def gas_turbine(p_1,T_1,p_2,p_3,T_3,eta_pi,eta_mec_c,eta_mec_t):
 
     delta_T = 10
     k=20
+    n=100
     while k>0 and delta_T > 1e-3 :
         k -= 1
         T_Old = T_2
-        cp12 = (cp12 + .79*CP.PropsSI('CPMASS','T', T_Old,'P', p_2, "N2") + .21*CP.PropsSI('CPMASS','T', T_Old,'P', p_2, "O2") )/2
+        range = np.linspace(T_1,T_2,n)
+        for i in range:
+            cp12 += .79*CP.PropsSI('CPMASS','T', i,'P', p_2, "N2") + .21*CP.PropsSI('CPMASS','T', i,'P', p_2, "O2")
+        cp12 = cp12/n
         T_2 = T_1*(p_2/p_1)**(R_Star/(eta_pi*cp12))
         delta_T = np.abs(T_2-T_Old)
-    print(k)
 
     h_2 = .79*CP.PropsSI('H','T', T_2,'P', p_2, "N2") + .21*CP.PropsSI('H','T', T_2,'P', p_2, "O2")
     s_2 = .79*CP.PropsSI('S','T', T_2,'P', p_2, "N2") + .21*CP.PropsSI('S','T', T_2,'P', p_2, "O2")
@@ -69,13 +72,17 @@ def gas_turbine(p_1,T_1,p_2,p_3,T_3,eta_pi,eta_mec_c,eta_mec_t):
 
     delta_T = 10
     k=20
+    n=100
     while k>0 and delta_T > 1e-3 :
         k -= 1
         T_Old = T_4
-        cp34 = (cp34 + .79*CP.PropsSI('CPMASS','T', T_Old,'P', p_4, "N2") + .21*CP.PropsSI('CPMASS','T', T_Old,'P', p_4, "O2") )/2
-        T_4 = T_3*(p_4/p_3)**(eta_pi*R_Star/(cp34))
+        range = np.linspace(T_3,T_4,n)
+        for i in range:
+            cp34 += .79*CP.PropsSI('CPMASS','T', i,'P', p_4, "N2") + .21*CP.PropsSI('CPMASS','T', i,'P', p_4, "O2")
+        cp34 = cp34/n
+        T_4 = T_3*(p_4/p_3)**(R_Star*eta_pi/(cp34))
         delta_T = np.abs(T_4-T_Old)
-    print(k)
+
 
     h_4 = .79*CP.PropsSI('H','T', T_4,'P', p_4, "N2") + .21*CP.PropsSI('H','T', T_4,'P', p_4, "O2")
     s_4 = .79*CP.PropsSI('S','T', T_4,'P', p_4, "N2") + .21*CP.PropsSI('S','T', T_4,'P', p_4, "O2")
@@ -112,6 +119,13 @@ def gas_turbine(p_1,T_1,p_2,p_3,T_3,eta_pi,eta_mec_c,eta_mec_t):
     out = (p,T,s,h,eta_en)
     return out
 
+p_1, T_1 = 1e+5, 293.15 # [Pa], [K]
+p_2 = 17.8e+5 # [Pa]
+p_3, T_3 = 17.8e+5, 1273.15 # [Pa], [K]
+eta_pi = 0.90 # [-]
+eta_mec_c, eta_mec_t = 0.98, 0.98 # [-], [-]
+
+p,T,s,h,eta_en = gas_turbine(p_1,T_1,p_2,p_3,T_3,eta_pi,eta_mec_c,eta_mec_t)
 
 #
 #===RANKINE CYCLE - TO BE IMPLEMENTED==========================================
