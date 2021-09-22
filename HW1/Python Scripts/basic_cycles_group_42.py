@@ -95,21 +95,21 @@ def gas_turbine(p_1,T_1,p_2,p_3,T_3,eta_pi,eta_mec_c,eta_mec_t):
     eta_gen = 1
     eta_en = eta_cyclen*eta_mec*eta_gen
 
-    print('     | p\t| T \t\t| s-s1\t\t| h-h1')
-    print('     | [kPa]\t| [K] \t\t| [kJ/kg.K]\t| [kJ/kg]')
-    print(75*'-')
-    print('  1  | %.2f\t| %.2f \t| %.2f \t\t| %.2f ' %(p_1/1000, T_1, s_1/1000, h_1/1000))
-    print('  2  | %.2f\t| %.2f \t| %.2f \t\t| %.2f ' %(p_2/1000, T_2, s_2/1000, h_2/1000))
-    print('  3  | %.2f\t| %.2f \t| %.2f \t\t| %.2f ' %(p_3/1000, T_3, s_3/1000, h_3/1000))
-    print('  4  | %.2f\t| %.2f \t| %.2f \t\t| %.2f ' %(p_4/1000, T_4, s_4/1000, h_4/1000))
-    print(75*'-')
-    print('eta_pi : %.2f' %eta_pi)
-    print('eta_mec_c : %.2f' %eta_mec_c)
-    print('W : %.2f' %W)
-    print('Q : %.2f' %Q)
-    print('eta_en : %.2f' %eta_en)
-    print(75*'_')
-    print('\n')
+    # print('     | p\t| T \t\t| s-s1\t\t| h-h1')
+    # print('     | [kPa]\t| [K] \t\t| [kJ/kg.K]\t| [kJ/kg]')
+    # print(75*'-')
+    # print('  1  | %.2f\t| %.2f \t| %.2f \t\t| %.2f ' %(p_1/1000, T_1, s_1/1000, h_1/1000))
+    # print('  2  | %.2f\t| %.2f \t| %.2f \t\t| %.2f ' %(p_2/1000, T_2, s_2/1000, h_2/1000))
+    # print('  3  | %.2f\t| %.2f \t| %.2f \t\t| %.2f ' %(p_3/1000, T_3, s_3/1000, h_3/1000))
+    # print('  4  | %.2f\t| %.2f \t| %.2f \t\t| %.2f ' %(p_4/1000, T_4, s_4/1000, h_4/1000))
+    # print(75*'-')
+    # print('eta_pi : %.2f' %eta_pi)
+    # print('eta_mec_c : %.2f' %eta_mec_c)
+    # print('W : %.2f' %W)
+    # print('Q : %.2f' %Q)
+    # print('eta_en : %.2f' %eta_en)
+    # print(75*'_')
+    # print('\n')
 
     # Final outputs - do not modify
     p = (p_1, p_2, p_3, p_4)
@@ -118,14 +118,6 @@ def gas_turbine(p_1,T_1,p_2,p_3,T_3,eta_pi,eta_mec_c,eta_mec_t):
     h = (h_1, h_2, h_3, h_4)
     out = (p,T,s,h,eta_en)
     return out
-
-p_1, T_1 = 1e+5, 293.15 # [Pa], [K]
-p_2 = 17.8e+5 # [Pa]
-p_3, T_3 = 17.8e+5, 1273.15 # [Pa], [K]
-eta_pi = 0.90 # [-]
-eta_mec_c, eta_mec_t = 0.98, 0.98 # [-], [-]
-
-p,T,s,h,eta_en = gas_turbine(p_1,T_1,p_2,p_3,T_3,eta_pi,eta_mec_c,eta_mec_t)
 
 #
 #===RANKINE CYCLE - TO BE IMPLEMENTED==========================================
