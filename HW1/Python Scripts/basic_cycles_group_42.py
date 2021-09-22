@@ -171,7 +171,7 @@ def steam_turbine(T_1,p_3,T_3,eta_gen,LHV,P_el,eta_mec_t,eta_is_t,eta_pump):
     dot_m_w = dot_m_v*(h_4 - h_1)/(CP.PropsSI('C','P',101325,'T',288.15,'Water')*dT_w)
 
     ##
-    dot_m_f = dot_m_v
+    dot_m_f = dot_m_c
 
     # Final outputs - do not modify
     p = (p_1, p_2, p_3, p_4)
