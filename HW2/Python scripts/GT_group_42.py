@@ -12,7 +12,42 @@ Signature of the final gas turbine function
 #===IMPORT PACKAGES============================================================
 #
 
-# Import yours (CoolProp, ...)
+import CoolProp.CoolProp as CP
+import numpy as np
+
+#
+#===MEAN CP====================================================================
+#
+def getMeanCp(p_in, p_out, T_in, T_out, R_Star):
+    T_min = np.min([T_in,T_out])
+    T_max = np.max([T_in,T_out])
+    p_min = np.min([p_in,p_out])
+    p_max = np.max([p_in,p_out])
+    cp = .79*CP.PropsSI('CPMASS','T', T_min,'P', p_min, "N2") + .21*CP.PropsSI('CPMASS','T', T_min,'P', p_min, "O2")
+    if T_min == T_max:
+        return(cp)
+    n=100
+    rangeT = np.linspace(T_min,T_max,n)
+    rangeP = np.ones(n)*p_min
+    p = p_min
+    for i in np.arange(1,n):
+        gamma = cp/(cp - i*R_Star)
+        p = p_min*(rangeT[i]/T_min)**((gamma-1)/gamma)
+        cp += .79*CP.PropsSI('CPMASS','T', rangeT[i],'P', rangeP[i], "N2") + .21*CP.PropsSI('CPMASS','T', rangeT[i],'P', p, "O2")
+    return(cp/n)
+#
+#===POLYTROPIC TEMPERATURE=====================================================
+#
+def getPolytropicTemp(p_in, p_out, T_in, T_out, R_Star, eta_pi, iter):
+    if iter < 0:
+        print("Function does not converge.")
+        return(-1)
+    T = T_in*(p_out/p_in)**(R_Star/(eta_pi*getMeanCp(p_in,p_out,T_in,T_out, R_Star)))
+    if np.abs(T_out-T) < 1e-12:
+        return(T)
+    else:
+        return(getPolytropicTemp(p_in, p_out, T_in, T, R_Star, eta_pi, iter-1))
+
 
 #
 #===BRAYTON CYCLE - TO BE IMPLEMENTED==========================================
@@ -25,7 +60,7 @@ Signature of the final gas turbine function
 #       o r [-], eta_pi_c [-]: compression ratio, compressor polytropic efficiency
 #       o T_3 [K], k_cc [-]: combustor outlet temperature and pressure losses coeffcient
 #       o eta_pi_t [-]: turbine polytropic efficiency
-#       o k_mec [-]: shaft losses 
+#       o k_mec [-]: shaft losses
 #   - display: bool to choose to plot the T-s & h-s diagrams and the energy and exergy pie charts (True or False)
 # OUT: tuple containing
 #   - DAT: tuple containing the cycle state data
@@ -74,10 +109,10 @@ Signature of the final gas turbine function
 def gas_turbine(P_e,options,display):
     # Process input variables--------------------------------------------------
     p_1,T_1,r,eta_pi_c,T_3,k_cc,eta_pi_t,k_mec = options
-    
-    # Replace with your model--------------------------------------------------    
-    p_1, p_2, p_3, p_4 = 0, 0, 0, 0
-    T_1, T_2, T_3, T_4 = 0, 0, 0, 0
+
+    # Replace with your model--------------------------------------------------
+    p_1, p_2, p_3, p_4 = p_1, 0, 0, 0
+    T_1, T_2, T_3, T_4 = T_1, 0, T_3, 0
     h_1, h_2, h_3, h_4 = 0, 0, 0, 0
     s_1, s_2, s_3, s_4 = 0, 0, 0, 0
     e_1, e_2, e_3, e_4 = 0, 0, 0, 0
@@ -87,7 +122,48 @@ def gas_turbine(P_e,options,display):
     loss_mec,loss_ech = 0, 0
     loss_mec,loss_rotex,loss_combex,loss_echex = 0, 0, 0, 0
     fig_pie_en,fig_pie_ex,fig_Ts_diagram,fig_hs_diagram = 0, 0, 0, 0
-    
+
+    R_Star = .79*CP.PropsSI('GAS_CONSTANT','T', T_1,'P', p_1, "N2")/CP.PropsSI('MOLAR_MASS','T', T_1,'P', p_1, "N2") + .21*CP.PropsSI('GAS_CONSTANT','T', T_1,'P', p_1, "O2")/CP.PropsSI('MOLAR_MASS','T', T_1,'P', p_1, "O2") # [J/kgK]
+
+    #set references state
+    DmolarN2 = CP.PropsSI("Dmolar", "T", T_1, "P", p_1, "N2")
+    CP.set_reference_state("N2", T_1, DmolarN2, 0, 0)
+    DmolarO2 = CP.PropsSI("Dmolar", "T", T_1, "P", p_1, "O2")
+    CP.set_reference_state("O2", T_1, DmolarO2, 0, 0)
+
+    # State 1 -- 4->1: Isobar Heat Rejection
+    s_1 = 0 #.79*CP.PropsSI('S','T', T_1,'P', p_1, "N2") + .21*CP.PropsSI('S','T', T_1,'P', p_1, "O2")    #Les deux lignes s_1 et h_1 sont useless car on
+    h_1 = 0 #.79*CP.PropsSI('H','T', T_1,'P', p_1, "N2") + .21*CP.PropsSI('H','T', T_1,'P', p_1, "O2")    #considère déjà que ce sont des points de référence
+    e_1 = h_1 - T_1*s_1                                                                                   #et qu'ils sont donc nuls.
+
+    # State 2 -- 1->2: Polytropic Compression
+    p_2 = r*p_1
+    T_2 = getPolytropicTemp(p_1, p_2, T_1, T_1, R_Star, eta_pi_c, 100)
+    h_2 = getMeanCp(p_1,p_2,T_1,T_2, R_Star)*(T_2-T_1)
+    s_2 = s_1 + getMeanCp(p_1,p_2,T_1,T_2, R_Star)*np.log(T_2/T_1) - R_Star*np.log(p_2/p_1)
+    e_2 = h_2 - T_2*s_2
+
+    # State 3 -- 2->3: Isobar Combustion
+    p_3 = p_2
+    s_3 = .79*CP.PropsSI('S','T', T_3,'P', p_3, "N2") + .21*CP.PropsSI('S','T', T_3,'P', p_3, "O2")
+    h_3 = .79*CP.PropsSI('H','T', T_3,'P', p_3, "N2") + .21*CP.PropsSI('H','T', T_3,'P', p_3, "O2")
+    e_3 = h_3 - T_3*s_3
+
+    # State 4 -- 3->4: Polytropic Expansion
+    p_4 = p_3/r
+    T_4 = getPolytropicTemp(p_3, p_4, T_3, T_3, R_Star, 1/eta_pi_t, 100)
+    h_4 = h_3 + getMeanCp(p_3,p_4,T_4,T_3, R_Star)*(T_4-T_3)
+    s_4 = s_3 + getMeanCp(p_3,p_4,T_3,T_4, R_Star)*np.log(T_4/T_3) - R_Star*np.log(p_4/p_3)
+    e_4 = h_4 - T_4*s_4
+
+    # # Efficiency
+    # W = (h_3-h_4)*eta_mec_t - (h_2-h_1)/eta_mec_c
+    # Q = h_3-h_2
+    # eta_cyclen = W/Q
+    # eta_mec = 1
+    # eta_gen = 1
+    # eta_toten = eta_cyclen*eta_mec*eta_gen
+
     # Process output variables - do not modify---------------------------------
     p = (p_1, p_2, p_3, p_4)
     T = (T_1, T_2, T_3, T_4)
