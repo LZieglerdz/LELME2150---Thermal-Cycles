@@ -15,12 +15,40 @@ Signatures of the functions for the homework
 import CoolProp.CoolProp as CP
 import numpy as np
 
+#
+#=== MEAN CP ==========================================
+#
+def getMeanCp(p_in, p_out, T_in, T_out, R_Star):
+    T_min = np.min([T_in,T_out])
+    T_max = np.max([T_in,T_out])
+    p_min = np.min([p_in,p_out])
+    p_max = np.max([p_in,p_out])
+    cp = .79*CP.PropsSI('CPMASS','T', T_min,'P', p_min, "N2") + .21*CP.PropsSI('CPMASS','T', T_min,'P', p_min, "O2")
+    if T_min == T_max:
+        return(cp)
+    n=100
+    rangeT = np.linspace(T_min,T_max,n)
+    rangeP = np.ones(n)*p_min
+    p = p_min
+    for i in np.arange(1,n):
+        gamma = cp/(cp - i*R_Star)
+        p = p_min*(rangeT[i]/T_min)**((gamma-1)/gamma)
+        cp += .79*CP.PropsSI('CPMASS','T', rangeT[i],'P', rangeP[i], "N2") + .21*CP.PropsSI('CPMASS','T', rangeT[i],'P', p, "O2")
+    return(cp/n)
+
+def getPolytropicTemp(p_in, p_out, T_in, T_out, R_Star, eta_pi, iter):
+    if iter < 0:
+        print("Function does not converge.")
+        return(-1)
+    T = T_in*(p_out/p_in)**(R_Star/(eta_pi*getMeanCp(p_in,p_out,T_in,T_out, R_Star)))
+    if np.abs(T_out-T) < 1e-12:
+        return(T)
+    else:
+        return(getPolytropicTemp(p_in, p_out, T_in, T, R_Star, eta_pi, iter-1))
 
 #
-#===BRAYTON CYCLE - TO BE IMPLEMENTED==========================================
+#=== BRAYTON CYCLE - GAS TURBINE ==========================================
 #
-
-
 def gas_turbine(p_1,T_1,p_2,p_3,T_3,eta_pi,eta_mec_c,eta_mec_t):
 
     p_1, p_2, p_3, p_4 = p_1, p_2, p_3, p_1     # [Pa]
@@ -30,7 +58,6 @@ def gas_turbine(p_1,T_1,p_2,p_3,T_3,eta_pi,eta_mec_c,eta_mec_t):
     eta_en = 0
 
     R_Star = .79*CP.PropsSI('GAS_CONSTANT','T', T_1,'P', p_1, "N2")/CP.PropsSI('MOLAR_MASS','T', T_1,'P', p_1, "N2") + .21*CP.PropsSI('GAS_CONSTANT','T', T_1,'P', p_1, "O2")/CP.PropsSI('MOLAR_MASS','T', T_1,'P', p_1, "O2") # [J/kgK]
-
 
     #set references state
     DmolarN2 = CP.PropsSI("Dmolar", "T", T_1, "P", p_1, "N2")
@@ -43,49 +70,18 @@ def gas_turbine(p_1,T_1,p_2,p_3,T_3,eta_pi,eta_mec_c,eta_mec_t):
     h_1 = .79*CP.PropsSI('H','T', T_1,'P', p_1, "N2") + .21*CP.PropsSI('H','T', T_1,'P', p_1, "O2")
 
     # State 2 -- 1->2: Polytropic Compression
-    cp12 = .79*CP.PropsSI('CPMASS','T', T_1,'P', p_1, "N2") + .21*CP.PropsSI('CPMASS','T', T_1,'P', p_1, "O2")
-    T_2 = T_1*(p_2/p_1)**(R_Star/(eta_pi*cp12))
-
-    delta_T = 10
-    k=20
-    n=100
-    while k>0 and delta_T > 1e-3 :
-        k -= 1
-        T_Old = T_2
-        range = np.linspace(T_1,T_2,n)
-        for i in range:
-            cp12 += .79*CP.PropsSI('CPMASS','T', i,'P', p_2, "N2") + .21*CP.PropsSI('CPMASS','T', i,'P', p_2, "O2")
-        cp12 = cp12/n
-        T_2 = T_1*(p_2/p_1)**(R_Star/(eta_pi*cp12))
-        delta_T = np.abs(T_2-T_Old)
-
-    h_2 = .79*CP.PropsSI('H','T', T_2,'P', p_2, "N2") + .21*CP.PropsSI('H','T', T_2,'P', p_2, "O2")
-    s_2 = .79*CP.PropsSI('S','T', T_2,'P', p_2, "N2") + .21*CP.PropsSI('S','T', T_2,'P', p_2, "O2")
+    T_2 = getPolytropicTemp(p_1, p_2, T_1, T_1, R_Star, eta_pi, 100)
+    h_2 = getMeanCp(p_1,p_2,T_1,T_2, R_Star)*(T_2-T_1)
+    s_2 = s_1 + getMeanCp(p_1,p_2,T_1,T_2, R_Star)*np.log(T_2/T_1) - R_Star*np.log(p_2/p_1)
 
     # State 3 -- 2->3: Isobar Combustion
     s_3 = .79*CP.PropsSI('S','T', T_3,'P', p_3, "N2") + .21*CP.PropsSI('S','T', T_3,'P', p_3, "O2")
     h_3 = .79*CP.PropsSI('H','T', T_3,'P', p_3, "N2") + .21*CP.PropsSI('H','T', T_3,'P', p_3, "O2")
 
     # State 4 -- 3->4: Polytropic Expansion
-    cp34 = .79*CP.PropsSI('CPMASS','T', T_3,'P', p_3, "N2") + .21*CP.PropsSI('CPMASS','T', T_3,'P', p_3, "O2")
-    T_4 = T_3*(p_4/p_3)**(R_Star/(eta_pi*cp34))
-
-    delta_T = 10
-    k=20
-    n=100
-    while k>0 and delta_T > 1e-3 :
-        k -= 1
-        T_Old = T_4
-        range = np.linspace(T_3,T_4,n)
-        for i in range:
-            cp34 += .79*CP.PropsSI('CPMASS','T', i,'P', p_4, "N2") + .21*CP.PropsSI('CPMASS','T', i,'P', p_4, "O2")
-        cp34 = cp34/n
-        T_4 = T_3*(p_4/p_3)**(R_Star*eta_pi/(cp34))
-        delta_T = np.abs(T_4-T_Old)
-
-
-    h_4 = .79*CP.PropsSI('H','T', T_4,'P', p_4, "N2") + .21*CP.PropsSI('H','T', T_4,'P', p_4, "O2")
-    s_4 = .79*CP.PropsSI('S','T', T_4,'P', p_4, "N2") + .21*CP.PropsSI('S','T', T_4,'P', p_4, "O2")
+    T_4 = getPolytropicTemp(p_3, p_4, T_3, T_3, R_Star, 1/eta_pi, 100)
+    h_4 = h_3 + getMeanCp(p_3,p_4,T_4,T_3, R_Star)*(T_4-T_3)
+    s_4 = s_3 + getMeanCp(p_3,p_4,T_3,T_4, R_Star)*np.log(T_4/T_3) - R_Star*np.log(p_4/p_3)
 
     # Efficiency
     W = (h_3-h_4)*eta_mec_t - (h_2-h_1)/eta_mec_c
@@ -95,21 +91,6 @@ def gas_turbine(p_1,T_1,p_2,p_3,T_3,eta_pi,eta_mec_c,eta_mec_t):
     eta_gen = 1
     eta_en = eta_cyclen*eta_mec*eta_gen
 
-    # print('     | p\t| T \t\t| s-s1\t\t| h-h1')
-    # print('     | [kPa]\t| [K] \t\t| [kJ/kg.K]\t| [kJ/kg]')
-    # print(75*'-')
-    # print('  1  | %.2f\t| %.2f \t| %.2f \t\t| %.2f ' %(p_1/1000, T_1, s_1/1000, h_1/1000))
-    # print('  2  | %.2f\t| %.2f \t| %.2f \t\t| %.2f ' %(p_2/1000, T_2, s_2/1000, h_2/1000))
-    # print('  3  | %.2f\t| %.2f \t| %.2f \t\t| %.2f ' %(p_3/1000, T_3, s_3/1000, h_3/1000))
-    # print('  4  | %.2f\t| %.2f \t| %.2f \t\t| %.2f ' %(p_4/1000, T_4, s_4/1000, h_4/1000))
-    # print(75*'-')
-    # print('eta_pi : %.2f' %eta_pi)
-    # print('eta_mec_c : %.2f' %eta_mec_c)
-    # print('W : %.2f' %W)
-    # print('Q : %.2f' %Q)
-    # print('eta_en : %.2f' %eta_en)
-    # print(75*'_')
-    # print('\n')
 
     # Final outputs - do not modify
     p = (p_1, p_2, p_3, p_4)
@@ -117,10 +98,25 @@ def gas_turbine(p_1,T_1,p_2,p_3,T_3,eta_pi,eta_mec_c,eta_mec_t):
     s = (s_1, s_2, s_3, s_4)
     h = (h_1, h_2, h_3, h_4)
     out = (p,T,s,h,eta_en)
+    # print('     | p\t| T \t\t| s-s1\t\t| h-h1')
+    # print('     | [kPa]\t| [K] \t\t| [kJ/kg.K]\t| [kJ/kg]')
+    # print(75*'-')
+    # print('  1  | %.2f\t| %.2f \t| %.2f \t\t| %.2f ' %(p[0]/1000, T[0], s[0]/1000, h[0]/1000))
+    # print('  2  | %.2f\t| %.2f \t| %.2f \t\t| %.2f ' %(p[1]/1000, T[1], s[1]/1000, h[1]/1000))
+    # print('  3  | %.2f\t| %.2f \t| %.2f \t\t| %.2f ' %(p[2]/1000, T[2], s[2]/1000, h[2]/1000))
+    # print('  4  | %.2f\t| %.2f \t| %.2f \t\t| %.2f ' %(p[3]/1000, T[3], s[3]/1000, h[3]/1000))
+    # print(75*'-')
+    # print('eta_en : %.3f' %eta_en)
+    # print('eta_pi : %.2f' %eta_pi)
+    # print('eta_mec_c : %.2f' %eta_mec_c)
+    # print('W : %.2f [kj/kg]' %(W/1000))
+    # print('Q : %.2f [kj/kg]' %(Q/1000))
+    # print(75*'_')
+    # print('\n')
     return out
 
 #
-#===RANKINE CYCLE - TO BE IMPLEMENTED==========================================
+#=== RANKINE CYCLE - STEAM TURBINE ==========================================
 #
 
 def steam_turbine(T_1,p_3,T_3,eta_gen,LHV,P_el,eta_mec_t,eta_is_t,eta_pump):

@@ -117,5 +117,5 @@ eta_gen = 0.6 # [-]
 LHV = 25e+6 # [J/kg]
 P_el = 95e+6 # [W]
 
-p,T,s,h,x,eta_en,dot_m_f = steam_turbine(T_1,p_3,T_3,eta_gen,LHV,P_el,eta_mec_t,eta_is_t,eta_pump)
-fig_ST = plot_eta_ST(T_1,p_3,T_3,eta_gen,LHV,P_el,eta_mec_t,eta_is_t,eta_pump)
+# p,T,s,h,x,eta_en,dot_m_f = steam_turbine(T_1,p_3,T_3,eta_gen,LHV,P_el,eta_mec_t,eta_is_t,eta_pump)
+# fig_ST = plot_eta_ST(T_1,p_3,T_3,eta_gen,LHV,P_el,eta_mec_t,eta_is_t,eta_pump)
