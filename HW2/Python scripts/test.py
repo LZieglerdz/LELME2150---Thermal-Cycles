@@ -6,7 +6,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from tabulate import tabulate
-from GT_group_42 import gas_turbine
+from GT_group_42 import gas_turbine, get_stoech, get_lambda, get_lambda2
 from ST_simple_group_42 import steam_turbine
 
 
@@ -35,17 +35,17 @@ def brayton():
     # eta_gen = 1
     # eta_en = eta_cyclen*eta_mec*eta_gen
     header_sol  = ['States', 'p\nkPa', 't\n°C', 'h\nkJ/kg', 's\nkJ/kgK', 'e\nkJ/kg']
-    data_sol    = [ ['1','100' ,'15'  ,'15.1'  ,'0.054' ,'0'        ],
-                ['2','1800','429' ,'443.4' ,'0.142' ,'403.2'    ],
-                ['3','1710','1400','1681.8','1.265','1317.9'    ],
-                ['4','100' ,'654' ,'731.5' ,'1.348','343.9'     ] ]
+    data_sol    = [ ['1',100 ,15  ,15.1  ,0.054 ,0    ],
+                    ['2',1800,429 ,443.4 ,0.142,403.2 ],
+                    ['3',1710,1400,1681.8,1.265,1317.9],
+                    ['4',100 ,654 ,731.5 ,1.348,343.9 ] ]
     print(tabulate(data_sol, headers=header_sol, tablefmt="pretty"))    #tablefmt="latex_booktabs" for latex export
 
     header  = ['States', 'p\nkPa', 't\n°C', 'h\nkJ/kg', 's\nkJ/kgK', 'e\nkJ/kg']
-    data    = [ ['1','%.0f'%(p[0]/1000), '%.0f'%(T[0]-273.15), '%.0f'%(h[0]/1000), '%.3f'%(s[0]/1000), '%.0f'%(e[0]/1000)],
-                ['2','%.0f'%(p[1]/1000), '%.0f'%(T[1]-273.15), '%.0f'%(h[1]/1000), '%.3f'%(s[1]/1000), '%.0f'%(e[1]/1000)],
-                ['3','%.0f'%(p[2]/1000), '%.0f'%(T[2]-273.15), '%.0f'%(h[2]/1000), '%.3f'%(s[2]/1000), '%.0f'%(e[2]/1000)],
-                ['4','%.0f'%(p[3]/1000), '%.0f'%(T[3]-273.15), '%.0f'%(h[3]/1000), '%.3f'%(s[3]/1000), '%.0f'%(e[3]/1000)] ]
+    data    = [ ['1','%.0f'%(p[0]/1000), '%.0f'%(T[0]-273.15), '%.1f'%(h[0]/1000), '%.3f'%(s[0]/1000), '%.0f'%(e[0]/1000)],
+                ['2','%.0f'%(p[1]/1000), '%.0f'%(T[1]-273.15), '%.1f'%(h[1]/1000), '%.3f'%(s[1]/1000), '%.0f'%(e[1]/1000)],
+                ['3','%.0f'%(p[2]/1000), '%.0f'%(T[2]-273.15), '%.1f'%(h[2]/1000), '%.3f'%(s[2]/1000), '%.0f'%(e[2]/1000)],
+                ['4','%.0f'%(p[3]/1000), '%.0f'%(T[3]-273.15), '%.1f'%(h[3]/1000), '%.3f'%(s[3]/1000), '%.0f'%(e[3]/1000)] ]
     print(tabulate(data, headers=header, tablefmt="pretty"))    #tablefmt="latex_booktabs" for latex export
 
     # print('     | p\t| T \t\t| s-s1\t\t| h-h1 \t\t\t| W : %.2f [kj/kg]' %(W/1000))
@@ -59,3 +59,7 @@ def brayton():
 
 if __name__ == "__main__":
     brayton()
+    print(get_lambda('CH4', 1, 4, 0, 273.15+429, 273.15+1400, 18e5, 17.1e5, 431.5e3,  289.0399801464282, 200, 1))
+    print(get_lambda2('CH4', 1, 4, 0, 273.15+429, 273.15+1400, 18e5, 17.1e5, 431.5e3,  289.0399801464282, 200, 1))
+    # w = get_steoch('CH4', 1, 4, 0, 273.15+429, 273.15+1400, 18e5, 17.1e5, 289.0399801464282, 200, 1)
+    print(17.12043124749108, 2.5170126887435957)
