@@ -18,6 +18,7 @@ from thermochem import janaf
 db = janaf.Janafdb();
 from scipy.integrate import quad;
 from scipy.optimize import fsolve
+import matplotlib.pyplot as plt
 # import re      #try to use regex to get composition of fuel from chemical formula: C4H10 -> C:4, H:10;
 
 #
@@ -34,26 +35,26 @@ O2_conc = .21         # %mol
 H2O_conc = 0          # %mol
 CO2_conc = 0          # %mol
 
-Mm_N2 = CP.PropsSI("MOLARMASS", "N2")        # kg/mol
 Mm_O2 = CP.PropsSI("MOLARMASS", "O2")        # kg/mol
+Mm_N2 = CP.PropsSI("MOLARMASS", "N2")        # kg/mol
+Mm_CO2 = CP.PropsSI("MOLARMASS", "CO2")        # kg/mol
 Mm_H2O = CP.PropsSI("MOLARMASS", "H2O")        # kg/mol
 Mm_H2 = CP.PropsSI("MOLARMASS", "H2")        # kg/mol
 Mm_Ar = CP.PropsSI("MOLARMASS", "Ar")        # kg/mol
-Mm_CO2 = CP.PropsSI("MOLARMASS", "CO2")        # kg/mol
 Mm_fuel = CP.PropsSI("MOLARMASS", fuel)        # kg/mol
 Mm_C = Mm_CO2-Mm_O2        # kg/mol
 Mm_H = .5*Mm_H2         # kg/mol
 Mm_O = .5*Mm_O2      # kg/mol
 
-comp = ["N2", "O2", "H2O", "CO2"]
-air_conc = [N2_conc, O2_conc, H2O_conc,CO2_conc]
-Mm   = [Mm_N2, Mm_O2, Mm_H2O,Mm_CO2]
+comp = ["O2","N2","CO2","H2O"]
+air_conc = [O2_conc,N2_conc,CO2_conc,H2O_conc]
+Mm   = [Mm_O2,Mm_N2,Mm_CO2,Mm_H2O]
 Mm_air = np.dot(Mm, air_conc)
 
-def ma1(x, y): #Stoechiometric air-to-fuel ratio [-]
+def get_ma1(x, y): #Stoechiometric air-to-fuel ratio [-]
     return (Mm_O2+3.76*Mm_N2)*(1+(y-2*x)*0.25)/(Mm_C+Mm_H*y+Mm_O*x);
 
-def LHV(x, y): # Lower Heating Value for solid fuels CHyOx
+def get_LHV(x, y): # Lower Heating Value for solid fuels CHyOx
     LHV_mol = 393400 + 102250*y - x*(111000 + 102250*y)/(1 + y/2) # [kJ/kmol]
     LHV = LHV_mol/(12 + y + 16*x) # [kJ/kg]
     return LHV
@@ -75,7 +76,7 @@ def CombEx(x, y): # CHyOx # e_c and Cp of different fuels (from slides of LMECA2
             Cp = 1.71176
     else:
         m_water = (y/2)*18/1000; # [kg]
-        HHV = LHV(x,y) + 2375*m_water; # [kJ/kg]
+        HHV = get_LHV(x,y) + 2375*m_water; # [kJ/kg]
         e_c = HHV - 5350; # [kJ/kg] T0*S = 5350 (S is the carbon entropy at standard conditions)
         Cp = 0.86667;
     return [Cp, e_c]
@@ -93,7 +94,8 @@ def FlueGasFrac(x, y, lamb):
     x_CO2f = x_CO2f/sum(x_f);
     x_H2Of = x_H2Of/sum(x_f);
     Mm_f = Mm_O2*x_O2f + Mm_N2*x_N2f + Mm_CO2*x_CO2f + Mm_H2O*x_H2Of; # Molar mass of fluegas [g/mol]
-    R_f = janaf.R*1000/Mm_f; # Ideal gas constant (R*) for exhaust gas [J/kg/K]
+    # R_f = janaf.R*1000/Mm_f; # Ideal gas constant (R*) for exhaust gas [J/kg/K]
+    R_f = janaf.R/Mm_f; # Ideal gas constant (R*) for exhaust gas [J/kg/K]
 
     return [Mm_f, [x_O2f, x_N2f, x_CO2f, x_H2Of], R_f]
 
@@ -109,10 +111,10 @@ def get_lambda(fuel, z, y, x, T_2, T_3, p_2, p_3,iter, lam_est):
     Mm_f, flue_conc_mol, R_f = FlueGasFrac(x, y, lam_est)
     flue_conc_mass = np.multiply(flue_conc_mol, [Mm_O2, Mm_N2, Mm_CO2, Mm_H2O])/Mm_f
 
-    cp_3S = getMeanCp2(p_S, p_3, T_S, T_3, R_f, comp, flue_conc_mass)
-    cp_32 = getMeanCp2(p_2, p_3, T_2, T_3, R_f, comp, flue_conc_mass)
+    cp_3S = getMeanCp(p_S, p_3, T_S, T_3, R_f, comp, flue_conc_mass)
+    cp_32 = getMeanCp(p_2, p_3, T_2, T_3, R_f, comp, flue_conc_mass)
 
-    lam = (LHV(x,y)*1e3-cp_3S*(T_3-T_S))/ (ma1(x,y)*cp_32*(T_3-T_2))
+    lam = (get_LHV(x,y)*1e3-cp_3S*(T_3-T_S))/ (get_ma1(x,y)*cp_32*(T_3-T_2))
 
     if iter == 0:
         print('The function get_lambda did not converge.')
@@ -132,51 +134,19 @@ def getCpMix(T, p, mix_comp, mix_conc):
          sum += (mix_conc[i]*CP.PropsSI('CPMASS', 'T', T, 'P', p, mix_comp[i]) )
     return(sum)
 
-def getMeanCp(p_in, p_out, T_in, T_out, R_Star, str):               #renvoie le cp massique moyen
-    T_min = np.min([T_in,T_out])
-    T_max = np.max([T_in,T_out])
-    p_min = np.min([p_in,p_out])
-    p_max = np.max([p_in,p_out])
-    if str == 'air':
-        mix_comp = comp
-        mix_conc = air_conc
-        cp = getCpMix(T_in, p_in, mix_comp, mix_conc)
-    elif str == 'flue':
-        mix_comp = comp                                     # a modif
-        mix_conc = air_conc                                     # a modif
-        cp = getCpMix(T_in, p_in, mix_comp, mix_conc)
-    else:
-        mix_comp = [str]
-        mix_conc = [1]
-        cp = getCpMix(T_in, p_in, mix_comp, mix_conc)
-    if T_min == T_max:
-        return(cp)
-    n=100
-    rangeT = np.linspace(T_min,T_max,n)
-    rangeP = np.ones(n)*p_min
-    p = p_min
-    for i in np.arange(1,n):
-        gamma = cp/(cp - i*R_Star)
-        p = p_min*(rangeT[i]/T_min)**((gamma-1)/gamma)
-        cp += getCpMix(rangeT[i], rangeP[i], mix_comp, mix_conc)
-    return(cp/n)
 
-def getMeanCp2(p_in, p_out, T_in, T_out, R_Star, mix_comp, mix_conc):               #renvoie le cp massique moyen
-    T_min = np.min([T_in,T_out])
-    T_max = np.max([T_in,T_out])
-    p_min = np.min([p_in,p_out])
-    p_max = np.max([p_in,p_out])
+def getMeanCp(p_in, p_out, T_in, T_out, R, mix_comp, mix_conc):               #renvoie le cp massique moyen
     cp = getCpMix(T_in, p_in, mix_comp, mix_conc)
 
-    if T_min == T_max:
+    if T_in == T_out:
         return(cp)
     n=100
-    rangeT = np.linspace(T_min,T_max,n)
-    rangeP = np.ones(n)*p_min
-    p = p_min
+    rangeT = np.linspace(T_in,T_out,n)
+    rangeP = np.ones(n)*p_in
+    p = p_in
     for i in np.arange(1,n):
-        gamma = cp/(cp - i*R_Star)
-        p = p_min*(rangeT[i]/T_min)**((gamma-1)/gamma)
+        gamma = cp/(cp - i*R)
+        p = p_in*(rangeT[i]/T_in)**((gamma-1)/gamma)
         cp += getCpMix(rangeT[i], rangeP[i], mix_comp, mix_conc)
     return(cp/n)
 
@@ -184,16 +154,17 @@ def getMeanCp2(p_in, p_out, T_in, T_out, R_Star, mix_comp, mix_conc):           
 #
 #===POLYTROPIC TEMPERATURE=====================================================
 #
-def getPolytropicTemp(p_in, p_out, T_in, T_out, R_Star, eta_pi, iter, str):
+def getPolytropicTemp(p_in, p_out, T_in, T_out, R, eta_pi, iter, mix_comp, mix_conc):
     if iter < 0:
         print("Function does not converge.")
         return(-1)
-    # T = T_in*(p_out/p_in)**(R_Star/(eta_pi*getMeanCp(p_in,p_out,T_in,T_out, R_Star, str )))
-    T = T_in*(p_out/p_in)**(R_Star/(eta_pi*getMeanCp(p_in,p_out,T_in,T_out, R_Star, str )))
+    cp = getMeanCp(p_in,p_out,T_in,T_out, R, mix_comp, mix_conc )
+    T = T_in*(p_out/p_in)**(R/(eta_pi*cp))
+    print(iter, T-273.15, cp)
     if np.abs(T_out-T) < 1e-12:
         return(T)
     else:
-        return(getPolytropicTemp(p_in, p_out, T_in, T, R_Star, eta_pi, iter-1, str))
+        return(getPolytropicTemp(p_in, p_out, T_in, T, R, eta_pi, iter-1, mix_comp, mix_conc))
 
 
 #
@@ -270,16 +241,15 @@ def gas_turbine(P_e,options,display):
     loss_mec,loss_rotex,loss_combex,loss_echex = 0, 0, 0, 0
     fig_pie_en,fig_pie_ex,fig_Ts_diagram,fig_hs_diagram = 0, 0, 0, 0
 
-    # LHV = LHV(0,4); #Lower heating value of CH4 [kJ/kg_CH4]
-    # e_c = CombEx(0, 4)[1]
-    # f = e_c/LHV; #e_comb/LHV
-    # ma1 = ma1(0,4);
-    # Cp_c = CombEx(0, 4)[0]
+    LHV = get_LHV(0,4); #Lower heating value of CH4 [kJ/kg_CH4]
+    e_c = CombEx(0, 4)[1]
+    f = e_c/LHV; #e_comb/LHV
+    ma1 = get_ma1(0,4);
+    Cp_c = CombEx(0, 4)[0]
 
     R_Star = 0
     for i in range(len(comp)):
         R_Star += air_conc[i]*CP.PropsSI('GAS_CONSTANT','T', T_1,'P', p_1, comp[i])/Mm[i] # [J/kgK]
-
 
     #set references state
     for i in comp:
@@ -290,25 +260,35 @@ def gas_turbine(P_e,options,display):
     # State 1 -- 4->1: Isobar Heat Rejection
     s_1 = .79*CP.PropsSI('S','T', T_1,'P', p_1, "N2") + .21*CP.PropsSI('S','T', T_1,'P', p_1, "O2")
     h_1 = .79*CP.PropsSI('H','T', T_1,'P', p_1, "N2") + .21*CP.PropsSI('H','T', T_1,'P', p_1, "O2")
-    e_1 = h_1 - T_1*s_1
+    e_1 = (h_1 - h_1) - T_1*(s_1 - s_1)
 
     # State 2 -- 1->2: Polytropic Compression
     p_2 = r*p_1
-    T_2 = getPolytropicTemp(p_1, p_2, T_1, T_1, R_Star, eta_pi_c, 100, 'air')
-    h_2 = getMeanCp(p_1,p_2,T_1,T_2, R_Star,'air')*(T_2-T_1)
-    s_2 = s_1 + getMeanCp(p_1,p_2,T_1,T_2, R_Star, 'air')*np.log(T_2/T_1) - R_Star*np.log(p_2/p_1)
-    e_2 = h_2 - T_2*s_2
+    T_2 = getPolytropicTemp(p_1, p_2, T_1, T_1, R_Star, eta_pi_c, 100, comp, air_conc)
+    h_2 = h_1 + getMeanCp(p_1,p_2,T_1,T_2, R_Star,comp, air_conc)*(T_2-T_1)
+    s_2 = s_1 + getMeanCp(p_1,p_2,T_1,T_2, R_Star, comp, air_conc)*np.log(T_2/T_1) - R_Star*np.log(p_2/p_1)
+    e_2 = (h_2 - h_1) - T_1*(s_2 - s_1)
 
     # State 3 -- 2->3: Isobar Combustion
     p_3 = k_cc*p_2
-    s_3 = .79*CP.PropsSI('S','T', T_3,'P', p_3, "N2") + .21*CP.PropsSI('S','T', T_3,'P', p_3, "O2")
-    h_3 = .79*CP.PropsSI('H','T', T_3,'P', p_3, "N2") + .21*CP.PropsSI('H','T', T_3,'P', p_3, "O2")
-    e_3 = h_3 - T_3*s_3
+    lamb = get_lambda('CH4', 1, 4, 0, T_2, T_3, p_2, p_3, 200, 1)
+    print(lamb)
 
-    # lamb_ma1 = lamb*ma1;
-    #
-    # excess_air = lamb;
-    # cp_gas = 1 #cp_fluegas(T0,400); #Cp of fluegas at 400[K] [kJ/kg_fluegas]
+    Mm_f, flue_conc_mol, R_f = FlueGasFrac(4, 0, lamb)
+    flue_conc_mass = np.multiply(flue_conc_mol, [Mm_O2, Mm_N2, Mm_CO2, Mm_H2O])/Mm_f
+
+    h_3 = h_2
+    s_3 = s_2
+    h_3 += getMeanCp(p_2,p_3,T_2,T_3, R_f, comp, flue_conc_mass)*(T_3-T_2)
+    for i in range(len(flue_conc_mass)):
+        s_3 += flue_conc_mass[i]*CP.PropsSI('S','T', T_3,'P', p_3, comp[i])
+    #     h_3 += flue_conc_mass[i]*CP.PropsSI('H','T', T_3,'P', p_3, comp[i])
+    e_3 = (h_3 - h_1) - T_1*(s_3 - s_1)
+
+    lamb_ma1 = lamb*ma1;
+
+    excess_air = lamb;
+    cp_gas = 1 #cp_fluegas(T0,400); #Cp of fluegas at 400[K] [kJ/kg_fluegas]
     # gas_prop[0] = m_O2f*(1+(1/lamb_ma1))*flow_air;  #Mass flow rate of O2 in exhaust gas [kg_O2/s]
     # gas_prop[1] = m_N2f*(1+(1/lamb_ma1))*flow_air;  #Mass flow rate of N2 in exhaust gas [kg_N2/s]
     # gas_prop[2] = m_CO2f*(1+(1/lamb_ma1))*flow_air; #Mass flow rate of CO2 in exhaust gas [kg_CO2/s]
@@ -316,70 +296,75 @@ def gas_turbine(P_e,options,display):
 
     # State 4 -- 3->4: Polytropic Expansion
     p_4 = p_1
-    T_4 = getPolytropicTemp(p_3, p_4, T_3, T_3, R_Star, 1/eta_pi_t, 100, 'flue')                      # CHANGE TRUE TO FALSE WHEN CPGAS IMPLEMENTED
-    h_4 = h_3 + getMeanCp(p_3,p_4,T_4,T_3, R_Star, 'flue')*(T_4-T_3)                                  # CHANGE TRUE TO FALSE WHEN CPGAS IMPLEMENTED
-    s_4 = s_3 + getMeanCp(p_3,p_4,T_3,T_4, R_Star, 'flue')*np.log(T_4/T_3) - R_Star*np.log(p_4/p_3)   # CHANGE TRUE TO FALSE WHEN CPGAS IMPLEMENTED
-    e_4 = h_4 - T_4*s_4
+    print(T_3, T_3-273.15)
+    T_4 = getPolytropicTemp(p_3, p_4, T_3, T_3, R_f , 1/eta_pi_t, 100, comp, flue_conc_mass)
 
-    #
-    # ## Efficiencies calculations
-    # # ==========================
-    #
-    # eta_cyclen = ((1+(1/lamb_ma1))*(h_3 - h_4) - (h_2 - h_1))/((1+(1/lamb_ma1))*h_3 - h_2); #Energetic efficiency of the cycle
-    # eta_mec = 1 - k_mec*((1+(1/lamb_ma1))*(h_3 - h_4) + (h_2 - h_1))/((1+(1/lamb_ma1))*(h_3 - h_4) - (h_2 - h_1)); #Mechanical efficiency
-    # eta_toten = eta_mec * eta_cyclen; #Total energetic efficiency
-    #
-    # eta_cyclex = ((1+(1/lamb_ma1))*(h_3 - h_4) - (h_2 - h_1))/((1+(1/lamb_ma1))*e_3 - e_2); #Exergetic efficiency of the cycle
-    # eta_rotex = ((1+(1/lamb_ma1))*(h_3 - h_4) - (h_2 - h_1))/((1+(1/lamb_ma1))*(e_3 - e_4) - (e_2 - e_1)); #Exergetic efficiency of the rotor assembly
-    # eta_combex = (1/f)*((1+(1/lamb_ma1))*e_3 - e_2)/((1+(1/lamb_ma1))*h_3 - h_2); #Exergetic efficiency of the combustion
-    # eta_totex = eta_mec * eta_cyclex * eta_combex; #Total exergetic efficiency
-    #
-    # ## Energetic losses
-    # # =================
-    #
-    # flow_air = P_e/(eta_mec*((1+(1/lamb_ma1))*(h_3 - h_4) - (h_2 - h_1)));  #Air mass flow rate [kg_air/s]
-    #
-    # loss_mec = k_mec*((1+(1/lamb_ma1))*(h_3 - h_4) + (h_2 - h_1))*flow_air; #Mechanical losses [W]
-    # loss_ech = ((1+(1/lamb_ma1))*h_4 - h_1)*flow_air;                       #Exhaust gas losses [W]
-    #
-    # ## Exergetic losses
-    # # =================
-    #
-    # loss_combex = flow_air*(e_2 + f*LHV/lamb_ma1 - (1+(1/lamb_ma1))*e_3); #Combustion losses [W]
-    # loss_turbine = flow_air*(1+(1/lamb_ma1))*((e_3 - e_4) - (h_3 - h_4)); #Shaft losses at the turbine [W]
-    # loss_compressor = flow_air*((h_2 - h_1) - (e_2 - e_1));               #Shaft losses at the compressor [W]
-    # loss_rotex = (loss_compressor + loss_turbine);                        #Total shaft losses [W]
-    # loss_echex = flow_air*((1+(1/lamb_ma1))*e_4 - e_1);                   #Exhaust gas losses [W]
-    #
-    # ## Mass flows
-    # # ===========
-    #
-    # dotm_a = flow_air; #Air mass flow rate [kg_air/s]
-    # dotm_f = flow_air/lamb_ma1; #Combustible mass flow rate [kg_comb/s]
-    # dotm_g = (1+(1/lamb_ma1))*flow_air;#Fluegas mass flow rate [kg_fluegas/s]
-    #
-    # ## Generate graph to export:
-    # # ==========================
-    #
-    # # My 1st figure: Pie chart energy
-    # fig_pie_en = plt.figure(1)
-    # labels = 'Effective Power \n'+ '%.1f'%(Pe*1e-6)+' MW', 'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW', 'Exhaust losses MW \n'+'%.1f'%(loss_ech*1e-6)+' MW'
-    # sizes = [Pe*1e-6, loss_mec*1e-6, loss_ech*1e-6]
-    # colors = ['gold', 'yellowgreen', 'lightcoral']
-    # #explode = (0, 0, 0, 0)
-    # plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=140)
-    # plt.axis('equal')
-    # plt.title("Primary energy flux " + "%.1f" %(LHV*dotm_f*1e-6) + " MW")
-    #
+    h_4 = h_3 + getMeanCp(p_3,p_4,T_4,T_3, R_f, comp, flue_conc_mass)*(T_4-T_3)
+    s_4 = s_3 + getMeanCp(p_3,p_4,T_3,T_4, R_f, comp, flue_conc_mass)*np.log(T_4/T_3) - R_f*np.log(p_4/p_3)
+    e_4 = (h_4 - h_1) - T_1*(s_4 - s_1)
+
+    print(R_Star, R_f)
+
+    ## Efficiencies calculations
+    # ==========================
+
+    eta_cyclen = ((1+(1/lamb_ma1))*(h_3 - h_4) - (h_2 - h_1))/((1+(1/lamb_ma1))*h_3 - h_2); #Energetic efficiency of the cycle
+    eta_mec = 1 - k_mec*((1+(1/lamb_ma1))*(h_3 - h_4) + (h_2 - h_1))/((1+(1/lamb_ma1))*(h_3 - h_4) - (h_2 - h_1)); #Mechanical efficiency
+    eta_toten = eta_mec * eta_cyclen; #Total energetic efficiency
+
+    eta_cyclex = ((1+(1/lamb_ma1))*(h_3 - h_4) - (h_2 - h_1))/((1+(1/lamb_ma1))*e_3 - e_2); #Exergetic efficiency of the cycle
+    eta_rotex = ((1+(1/lamb_ma1))*(h_3 - h_4) - (h_2 - h_1))/((1+(1/lamb_ma1))*(e_3 - e_4) - (e_2 - e_1)); #Exergetic efficiency of the rotor assembly
+    eta_combex = (1/f)*((1+(1/lamb_ma1))*e_3 - e_2)/((1+(1/lamb_ma1))*h_3 - h_2); #Exergetic efficiency of the combustion
+    eta_totex = eta_mec * eta_cyclex * eta_combex; #Total exergetic efficiency
+
+    ## Energetic losses
+    # =================
+
+    flow_air = P_e/(eta_mec*((1+(1/lamb_ma1))*(h_3 - h_4) - (h_2 - h_1)));  #Air mass flow rate [kg_air/s]
+
+    loss_mec = k_mec*((1+(1/lamb_ma1))*(h_3 - h_4) + (h_2 - h_1))*flow_air; #Mechanical losses [W]
+    loss_ech = ((1+(1/lamb_ma1))*h_4 - h_1)*flow_air;                       #Exhaust gas losses [W]
+
+    ## Exergetic losses
+    # =================
+
+    loss_combex = flow_air*(e_2 + f*LHV/lamb_ma1 - (1+(1/lamb_ma1))*e_3); #Combustion losses [W]
+    loss_turbine = flow_air*(1+(1/lamb_ma1))*((e_3 - e_4) - (h_3 - h_4)); #Shaft losses at the turbine [W]
+    loss_compressor = flow_air*((h_2 - h_1) - (e_2 - e_1));               #Shaft losses at the compressor [W]
+    loss_rotex = (loss_compressor + loss_turbine);                        #Total shaft losses [W]
+    loss_echex = flow_air*((1+(1/lamb_ma1))*e_4 - e_1);                   #Exhaust gas losses [W]
+
+    ## Mass flows
+    # ===========
+
+    dotm_a = flow_air; #Air mass flow rate [kg_air/s]
+    dotm_f = flow_air/lamb_ma1; #Combustible mass flow rate [kg_comb/s]
+    dotm_g = (1+(1/lamb_ma1))*flow_air;#Fluegas mass flow rate [kg_fluegas/s]
+
+    ## Generate graph to export:
+    # ==========================
+
+    # My 1st figure: Pie chart energy
+    fig_pie_en = plt.figure(1)
+    labels = 'Effective Power \n'+ '%.1f'%(P_e*1e-6)+' MW', 'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW', 'Exhaust losses MW \n'+'%.1f'%(loss_ech*1e-6)+' MW'
+    sizes = [P_e*1e-6, loss_mec*1e-6, loss_ech*1e-6]
+    colors = ['gold', 'yellowgreen', 'lightcoral']
+    #explode = (0, 0, 0, 0)
+    plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=140)
+    plt.axis('equal')
+    plt.title("Primary energy flux " + "%.1f" %(LHV*dotm_f*1e-6) + " MW")
+
     # # My 2nd figure: Pie chart exergy
     # fig_pie_ex = plt.figure(2)
-    # labels = 'Effective Power \n'+ '%.1f'%(Pe*1e-6)+' MW', 'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW', 'Exhaust losses \n'+'%.1f'%(loss_echex*1e-6)+' MW', 'Turbine & compressor \n irreversibilities \n'+'%.1f'%(loss_rotex*1e-6)+' MW', 'Combustion \n irreversibilities \n'+'%.1f'%(loss_combex*1e-6)+' MW'
-    # sizes = [Pe*1e-6, loss_mec*1e-6, loss_echex*1e-6, loss_rotex*1e-6, loss_combex*1e-6]
+    # labels = 'Effective Power \n'+ '%.1f'%(P_e*1e-6)+' MW', 'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW', 'Exhaust losses \n'+'%.1f'%(loss_echex*1e-6)+' MW', 'Turbine & compressor \n irreversibilities \n'+'%.1f'%(loss_rotex*1e-6)+' MW', 'Combustion \n irreversibilities \n'+'%.1f'%(loss_combex*1e-6)+' MW'
+    # sizes = [P_e*1e-6, loss_mec*1e-6, loss_echex*1e-6, loss_rotex*1e-6, loss_combex*1e-6]
     # colors = ['gold', 'yellowgreen', 'lightcoral', 'lightskyblue', 'red']
     # #explode = (0, 0, 0, 0)
     # plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=340)
     # plt.axis('equal')
     # plt.title("Primary exergy flux " + "%.1f" %(e_c*dotm_f*1e-6) + " MW")
+
+    plt.show()
 
     # Process output variables - do not modify---------------------------------
     p = (p_1, p_2, p_3, p_4)
