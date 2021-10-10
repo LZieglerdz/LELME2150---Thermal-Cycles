@@ -160,7 +160,7 @@ def getPolytropicTemp(p_in, p_out, T_in, T_out, R, eta_pi, iter, mix_comp, mix_c
         return(-1)
     cp = getMeanCp(p_in,p_out,T_in,T_out, R, mix_comp, mix_conc )
     T = T_in*(p_out/p_in)**(R/(eta_pi*cp))
-    print(iter, T-273.15, cp)
+    # print(iter, T-273.15, cp)
     if np.abs(T_out-T) < 1e-12:
         return(T)
     else:
@@ -272,17 +272,15 @@ def gas_turbine(P_e,options,display):
     # State 3 -- 2->3: Isobar Combustion
     p_3 = k_cc*p_2
     lamb = get_lambda('CH4', 1, 4, 0, T_2, T_3, p_2, p_3, 200, 1)
-    print(lamb)
+    print("lambda: %.2f" %lamb)
 
-    Mm_f, flue_conc_mol, R_f = FlueGasFrac(4, 0, lamb)
+    Mm_f, flue_conc_mol, R_f = FlueGasFrac(0, 4, lamb)
     flue_conc_mass = np.multiply(flue_conc_mol, [Mm_O2, Mm_N2, Mm_CO2, Mm_H2O])/Mm_f
 
     h_3 = h_2
     s_3 = s_2
     h_3 += getMeanCp(p_2,p_3,T_2,T_3, R_f, comp, flue_conc_mass)*(T_3-T_2)
-    for i in range(len(flue_conc_mass)):
-        s_3 += flue_conc_mass[i]*CP.PropsSI('S','T', T_3,'P', p_3, comp[i])
-    #     h_3 += flue_conc_mass[i]*CP.PropsSI('H','T', T_3,'P', p_3, comp[i])
+    s_3 += getMeanCp(p_2,p_3,T_2,T_3, R_f, comp, flue_conc_mass)*np.log(T_3/T_2) - R_f*np.log(p_3/p_2)
     e_3 = (h_3 - h_1) - T_1*(s_3 - s_1)
 
     lamb_ma1 = lamb*ma1;
@@ -296,14 +294,11 @@ def gas_turbine(P_e,options,display):
 
     # State 4 -- 3->4: Polytropic Expansion
     p_4 = p_1
-    print(T_3, T_3-273.15)
     T_4 = getPolytropicTemp(p_3, p_4, T_3, T_3, R_f , 1/eta_pi_t, 100, comp, flue_conc_mass)
 
     h_4 = h_3 + getMeanCp(p_3,p_4,T_4,T_3, R_f, comp, flue_conc_mass)*(T_4-T_3)
     s_4 = s_3 + getMeanCp(p_3,p_4,T_3,T_4, R_f, comp, flue_conc_mass)*np.log(T_4/T_3) - R_f*np.log(p_4/p_3)
     e_4 = (h_4 - h_1) - T_1*(s_4 - s_1)
-
-    print(R_Star, R_f)
 
     ## Efficiencies calculations
     # ==========================
@@ -364,7 +359,7 @@ def gas_turbine(P_e,options,display):
     # plt.axis('equal')
     # plt.title("Primary exergy flux " + "%.1f" %(e_c*dotm_f*1e-6) + " MW")
 
-    plt.show()
+    # plt.show()
 
     # Process output variables - do not modify---------------------------------
     p = (p_1, p_2, p_3, p_4)
