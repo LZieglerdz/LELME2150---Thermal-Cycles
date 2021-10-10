@@ -6,7 +6,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from tabulate import tabulate
-from GT_group_42 import gas_turbine, get_stoech, get_lambda, get_lambda2
+from GT_group_42 import gas_turbine, get_lambda
 from ST_simple_group_42 import steam_turbine
 
 
@@ -59,7 +59,4 @@ def brayton():
 
 if __name__ == "__main__":
     brayton()
-    print(get_lambda('CH4', 1, 4, 0, 273.15+429, 273.15+1400, 18e5, 17.1e5, 431.5e3,  289.0399801464282, 200, 1))
-    print(get_lambda2('CH4', 1, 4, 0, 273.15+429, 273.15+1400, 18e5, 17.1e5, 431.5e3,  289.0399801464282, 200, 1))
-    # w = get_steoch('CH4', 1, 4, 0, 273.15+429, 273.15+1400, 18e5, 17.1e5, 289.0399801464282, 200, 1)
-    print(17.12043124749108, 2.5170126887435957)
+    print(get_lambda('CH4', 1, 4, 0, 273.15+429, 273.15+1400, 18e5, 17.1e5, 200, 1))
