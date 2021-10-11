@@ -12,7 +12,9 @@ Signature of the simple steam turbine function
 #===IMPORT PACKAGES============================================================
 #
 
-# Import yours (CoolProp, ...)
+import CoolProp.CoolProp as CP
+import numpy as np
+
 
 #
 #===RANKINE CYCLE - TO BE IMPLEMENTED==========================================
