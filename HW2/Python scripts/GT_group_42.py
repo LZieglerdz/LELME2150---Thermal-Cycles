@@ -94,7 +94,6 @@ def FlueGasFrac(x, y, lamb):
     x_CO2f = x_CO2f/sum(x_f);
     x_H2Of = x_H2Of/sum(x_f);
     Mm_f = Mm_O2*x_O2f + Mm_N2*x_N2f + Mm_CO2*x_CO2f + Mm_H2O*x_H2Of; # Molar mass of fluegas [g/mol]
-    # R_f = janaf.R*1000/Mm_f; # Ideal gas constant (R*) for exhaust gas [J/kg/K]
     R_f = janaf.R/Mm_f; # Ideal gas constant (R*) for exhaust gas [J/kg/K]
 
     return [Mm_f, [x_O2f, x_N2f, x_CO2f, x_H2Of], R_f]
@@ -285,13 +284,6 @@ def gas_turbine(P_e,options,display):
 
     lamb_ma1 = lamb*ma1;
 
-    excess_air = lamb;
-    cp_gas = 1 #cp_fluegas(T0,400); #Cp of fluegas at 400[K] [kJ/kg_fluegas]
-    # gas_prop[0] = m_O2f*(1+(1/lamb_ma1))*flow_air;  #Mass flow rate of O2 in exhaust gas [kg_O2/s]
-    # gas_prop[1] = m_N2f*(1+(1/lamb_ma1))*flow_air;  #Mass flow rate of N2 in exhaust gas [kg_N2/s]
-    # gas_prop[2] = m_CO2f*(1+(1/lamb_ma1))*flow_air; #Mass flow rate of CO2 in exhaust gas [kg_CO2/s]
-    # gas_prop[3] = m_H2Of*(1+(1/lamb_ma1))*flow_air; #Mass flow rate of H2O in exhaust gas [kg_H2O/s]
-
     # State 4 -- 3->4: Polytropic Expansion
     p_4 = p_1
     T_4 = getPolytropicTemp(p_3, p_4, T_3, T_3, R_f , 1/eta_pi_t, 100, comp, flue_conc_mass)
@@ -320,21 +312,37 @@ def gas_turbine(P_e,options,display):
     loss_mec = k_mec*((1+(1/lamb_ma1))*(h_3 - h_4) + (h_2 - h_1))*flow_air; #Mechanical losses [W]
     loss_ech = ((1+(1/lamb_ma1))*h_4 - h_1)*flow_air;                       #Exhaust gas losses [W]
 
-    ## Exergetic losses
-    # =================
-
-    loss_combex = flow_air*(e_2 + f*LHV/lamb_ma1 - (1+(1/lamb_ma1))*e_3); #Combustion losses [W]
-    loss_turbine = flow_air*(1+(1/lamb_ma1))*((e_3 - e_4) - (h_3 - h_4)); #Shaft losses at the turbine [W]
-    loss_compressor = flow_air*((h_2 - h_1) - (e_2 - e_1));               #Shaft losses at the compressor [W]
-    loss_rotex = (loss_compressor + loss_turbine);                        #Total shaft losses [W]
-    loss_echex = flow_air*((1+(1/lamb_ma1))*e_4 - e_1);                   #Exhaust gas losses [W]
-
     ## Mass flows
     # ===========
 
     dotm_a = flow_air; #Air mass flow rate [kg_air/s]
     dotm_f = flow_air/lamb_ma1; #Combustible mass flow rate [kg_comb/s]
     dotm_g = (1+(1/lamb_ma1))*flow_air;#Fluegas mass flow rate [kg_fluegas/s]
+
+    excess_air = lamb;
+    x_O2f, x_N2f, x_CO2f, x_H2Of = flue_conc_mol
+    gas_prop = [x_CO2f, x_H2Of, x_N2f, x_O2f]
+    cp_gas = getMeanCp(p_S, p_3, T_S, T_3, R_f, comp, flue_conc_mass) #cp_fluegas(T0,400); #Cp of fluegas at 400[K] [kJ/kg_fluegas]
+
+    # gas_prop[0] = x_O2f*(1+(1/lamb_ma1))*flow_air;  #Mass flow rate of O2 in exhaust gas [kg_O2/s]
+    # gas_prop[1] = x_N2f*(1+(1/lamb_ma1))*flow_air;  #Mass flow rate of N2 in exhaust gas [kg_N2/s]
+    # gas_prop[2] = x_CO2f*(1+(1/lamb_ma1))*flow_air; #Mass flow rate of CO2 in exhaust gas [kg_CO2/s]
+    # gas_prop[3] = x_H2Of*(1+(1/lamb_ma1))*flow_air; #Mass flow rate of H2O in exhaust gas [kg_H2O/s]
+
+
+    ## Exergetic losses
+    # =================
+
+    # pb avec loss_combex
+    perte_combex = dotm_g*(e_c - s_2 + s_3 + s_4 ) - (dotm_f*e_3-dotm_a*e_2)     #Ju
+    # loss_combex = flow_air*(e_2 + f*LHV/lamb_ma1 - (1+(1/lamb_ma1))*e_3); #Combustion losses [W]
+    print(e_2)
+    print( f, LHV, lamb_ma1)
+    print((1+(1/lamb_ma1))*e_3)
+    loss_turbine = flow_air*(1+(1/lamb_ma1))*((e_3 - e_4) - (h_3 - h_4)); #Shaft losses at the turbine [W]
+    loss_compressor = flow_air*((h_2 - h_1) - (e_2 - e_1));               #Shaft losses at the compressor [W]
+    loss_rotex = (loss_compressor + loss_turbine);                        #Total shaft losses [W]
+    loss_echex = flow_air*((1+(1/lamb_ma1))*e_4 - e_1);                   #Exhaust gas losses [W]
 
     ## Generate graph to export:
     # ==========================
@@ -350,16 +358,16 @@ def gas_turbine(P_e,options,display):
     plt.title("Primary energy flux " + "%.1f" %(LHV*dotm_f*1e-6) + " MW")
 
     # # My 2nd figure: Pie chart exergy
-    # fig_pie_ex = plt.figure(2)
-    # labels = 'Effective Power \n'+ '%.1f'%(P_e*1e-6)+' MW', 'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW', 'Exhaust losses \n'+'%.1f'%(loss_echex*1e-6)+' MW', 'Turbine & compressor \n irreversibilities \n'+'%.1f'%(loss_rotex*1e-6)+' MW', 'Combustion \n irreversibilities \n'+'%.1f'%(loss_combex*1e-6)+' MW'
-    # sizes = [P_e*1e-6, loss_mec*1e-6, loss_echex*1e-6, loss_rotex*1e-6, loss_combex*1e-6]
-    # colors = ['gold', 'yellowgreen', 'lightcoral', 'lightskyblue', 'red']
-    # #explode = (0, 0, 0, 0)
+    fig_pie_ex = plt.figure(2)
+    labels = 'Effective Power \n'+ '%.1f'%(P_e*1e-6)+' MW', 'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW', 'Exhaust losses \n'+'%.1f'%(loss_echex*1e-6)+' MW', 'Turbine & compressor \n irreversibilities \n'+'%.1f'%(loss_rotex*1e-6)+' MW', 'Combustion \n irreversibilities \n'+'%.1f'%(loss_combex*1e-6)+' MW'
+    sizes = [P_e*1e-6, loss_mec*1e-6, loss_echex*1e-6, loss_rotex*1e-6, loss_combex*1e-6]
+    colors = ['gold', 'yellowgreen', 'lightcoral', 'lightskyblue', 'red']
+    #explode = (0, 0, 0, 0)
     # plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=340)
     # plt.axis('equal')
     # plt.title("Primary exergy flux " + "%.1f" %(e_c*dotm_f*1e-6) + " MW")
-
-    # plt.show()
+    print(sizes)
+    plt.show()
 
     # Process output variables - do not modify---------------------------------
     p = (p_1, p_2, p_3, p_4)
