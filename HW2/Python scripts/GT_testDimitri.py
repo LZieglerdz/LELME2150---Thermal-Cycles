@@ -1,4 +1,4 @@
-## Efficiencies calculations
+    ## Efficiencies calculations
     # ==========================
 
     eta_cyclen = ((1+(1/lamb_ma1))*(h_3 - h_4) - (h_2 - h_1))/((1+(1/lamb_ma1))*h_3 - h_2); #Energetic efficiency of the cycle
@@ -33,7 +33,7 @@
     dotm_a = flow_air; #Air mass flow rate [kg_air/s]
     dotm_f = flow_air/lamb_ma1; #Combustible mass flow rate [kg_comb/s]
     dotm_g = (1+(1/lamb_ma1))*flow_air;#Fluegas mass flow rate [kg_fluegas/s]
-    
+
     gas_prop = [flue_conc_mass[2]*(1+(1/lamb_ma1))*flow_air,
                 flue_conc_mass[3]*(1+(1/lamb_ma1))*flow_air,
                 flue_conc_mass[1]*(1+(1/lamb_ma1))*flow_air,
@@ -62,7 +62,7 @@
     plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=300)
     plt.axis('equal')
     plt.title("Primary exergy flux " + "%.1f" %(e_c*dotm_f*1e-3) + " MW")
-    
+
 
     p = (p_1, p_2, p_3, p_4) # [Pa]
     T = (T_1, T_2, T_3, T_4) # [K]
@@ -70,7 +70,7 @@
     h = (h_1, h_2, h_3, h_4) # [J/kg]
     e = (e_1, e_2, e_3, e_4) # [J/kg]
 
-    
+
     # My 3rd figure: T-s
     fig_Ts_diagram = plt.figure(3)
     plt.scatter(np.array(s)*1e-3, T, c="red")
@@ -85,8 +85,8 @@
     plt.title('T-s diagram of the cycle')
     plt.xlabel("s $[kJ/kg/K]$")
     plt.ylabel("T $[K]$")
-    
-    
+
+
     # My 4th figure: h-s
     fig_hs_diagram = plt.figure(4)
     plt.scatter(np.array(s)*1e-3, np.array(h)*1e-3, c="red")
@@ -101,5 +101,5 @@
     plt.title('h-s diagram of the cycle')
     plt.xlabel("s $[kJ/kg/K]$")
     plt.ylabel("h $[kJ/kg]$")
-    
+
     plt.show()

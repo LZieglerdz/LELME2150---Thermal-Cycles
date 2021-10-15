@@ -255,7 +255,6 @@ def gas_turbine(P_e,options,display):
         Dmolar = CP.PropsSI("Dmolar", "T", T_S, "P", p_1, i)
         CP.set_reference_state(i, T_S, Dmolar, 0, 0)
 
-
     # State 1 -- 4->1: Isobar Heat Rejection
     s_1 = .79*CP.PropsSI('S','T', T_1,'P', p_1, "N2") + .21*CP.PropsSI('S','T', T_1,'P', p_1, "O2")
     h_1 = .79*CP.PropsSI('H','T', T_1,'P', p_1, "N2") + .21*CP.PropsSI('H','T', T_1,'P', p_1, "O2")
@@ -264,22 +263,21 @@ def gas_turbine(P_e,options,display):
     # State 2 -- 1->2: Polytropic Compression
     p_2 = r*p_1
     T_2 = getPolytropicTemp(p_1, p_2, T_1, T_1, R_Star, eta_pi_c, 100, comp, air_conc)
-    h_2 = h_1 + getMeanCp(p_1,p_2,T_1,T_2, R_Star,comp, air_conc)*(T_2-T_1)
-    s_2 = s_1 + getMeanCp(p_1,p_2,T_1,T_2, R_Star, comp, air_conc)*np.log(T_2/T_1) - R_Star*np.log(p_2/p_1)
+    cp_2 = getMeanCp(p_1,p_2,T_1,T_2, R_Star,comp, air_conc)
+    h_2 = h_1 + cp_2*(T_2-T_1)
+    s_2 = s_1 + cp_2*np.log(T_2/T_1) - R_Star*np.log(p_2/p_1)
     e_2 = (h_2 - h_1) - T_1*(s_2 - s_1)
 
     # State 3 -- 2->3: Isobar Combustion
     p_3 = k_cc*p_2
     lamb = get_lambda('CH4', 1, 4, 0, T_2, T_3, p_2, p_3, 200, 1)
-    print("lambda: %.2f" %lamb)
+    # print("lambda: %.2f" %lamb)
 
     Mm_f, flue_conc_mol, R_f = FlueGasFrac(0, 4, lamb)
     flue_conc_mass = np.multiply(flue_conc_mol, [Mm_O2, Mm_N2, Mm_CO2, Mm_H2O])/Mm_f
-
-    h_3 = h_2
-    s_3 = s_2
-    h_3 += getMeanCp(p_2,p_3,T_2,T_3, R_f, comp, flue_conc_mass)*(T_3-T_2)
-    s_3 += getMeanCp(p_2,p_3,T_2,T_3, R_f, comp, flue_conc_mass)*np.log(T_3/T_2) - R_f*np.log(p_3/p_2)
+    cp_3 = getMeanCp(p_2,p_3,T_2,T_3, R_f, comp, flue_conc_mass)
+    h_3 = h_2 + cp_3*(T_3-T_2)
+    s_3 = s_2 + cp_3*np.log(T_3/T_2) - R_f*np.log(p_3/p_2)
     e_3 = (h_3 - h_1) - T_1*(s_3 - s_1)
 
     lamb_ma1 = lamb*ma1;
@@ -287,9 +285,9 @@ def gas_turbine(P_e,options,display):
     # State 4 -- 3->4: Polytropic Expansion
     p_4 = p_1
     T_4 = getPolytropicTemp(p_3, p_4, T_3, T_3, R_f , 1/eta_pi_t, 100, comp, flue_conc_mass)
-
-    h_4 = h_3 + getMeanCp(p_3,p_4,T_4,T_3, R_f, comp, flue_conc_mass)*(T_4-T_3)
-    s_4 = s_3 + getMeanCp(p_3,p_4,T_3,T_4, R_f, comp, flue_conc_mass)*np.log(T_4/T_3) - R_f*np.log(p_4/p_3)
+    cp_4 = getMeanCp(p_3,p_4,T_4,T_3, R_f, comp, flue_conc_mass)
+    h_4 = h_3 + cp_4*(T_4-T_3)
+    s_4 = s_3 + cp_4*np.log(T_4/T_3) - R_f*np.log(p_4/p_3)
     e_4 = (h_4 - h_1) - T_1*(s_4 - s_1)
 
     ## Efficiencies calculations
@@ -312,6 +310,15 @@ def gas_turbine(P_e,options,display):
     loss_mec = k_mec*((1+(1/lamb_ma1))*(h_3 - h_4) + (h_2 - h_1))*flow_air; #Mechanical losses [W]
     loss_ech = ((1+(1/lamb_ma1))*h_4 - h_1)*flow_air;                       #Exhaust gas losses [W]
 
+    ## Exergetic losses
+    # =================
+
+    loss_combex = flow_air*(e_2 + f*LHV*1e3/lamb_ma1 - (1+(1/lamb_ma1))*e_3); #Combustion losses [W]
+    loss_turbine = flow_air*(1+(1/lamb_ma1))*((e_3 - e_4) - (h_3 - h_4)); #Shaft losses at the turbine [W]
+    loss_compressor = flow_air*((h_2 - h_1) - (e_2 - e_1));               #Shaft losses at the compressor [W]
+    loss_rotex = (loss_compressor + loss_turbine);                        #Total shaft losses [W]
+    loss_echex = flow_air*((1+(1/lamb_ma1))*e_4 - e_1);                   #Exhaust gas losses [W]
+
     ## Mass flows
     # ===========
 
@@ -319,30 +326,11 @@ def gas_turbine(P_e,options,display):
     dotm_f = flow_air/lamb_ma1; #Combustible mass flow rate [kg_comb/s]
     dotm_g = (1+(1/lamb_ma1))*flow_air;#Fluegas mass flow rate [kg_fluegas/s]
 
-    excess_air = lamb;
-    x_O2f, x_N2f, x_CO2f, x_H2Of = flue_conc_mol
-    gas_prop = [x_CO2f, x_H2Of, x_N2f, x_O2f]
-    cp_gas = getMeanCp(p_S, p_3, T_S, T_3, R_f, comp, flue_conc_mass) #cp_fluegas(T0,400); #Cp of fluegas at 400[K] [kJ/kg_fluegas]
+    gas_prop = [flue_conc_mass[2]*(1+(1/lamb_ma1))*flow_air,
+                flue_conc_mass[3]*(1+(1/lamb_ma1))*flow_air,
+                flue_conc_mass[1]*(1+(1/lamb_ma1))*flow_air,
+                flue_conc_mass[0]*(1+(1/lamb_ma1))*flow_air]
 
-    # gas_prop[0] = x_O2f*(1+(1/lamb_ma1))*flow_air;  #Mass flow rate of O2 in exhaust gas [kg_O2/s]
-    # gas_prop[1] = x_N2f*(1+(1/lamb_ma1))*flow_air;  #Mass flow rate of N2 in exhaust gas [kg_N2/s]
-    # gas_prop[2] = x_CO2f*(1+(1/lamb_ma1))*flow_air; #Mass flow rate of CO2 in exhaust gas [kg_CO2/s]
-    # gas_prop[3] = x_H2Of*(1+(1/lamb_ma1))*flow_air; #Mass flow rate of H2O in exhaust gas [kg_H2O/s]
-
-
-    ## Exergetic losses
-    # =================
-
-    # pb avec loss_combex
-    perte_combex = dotm_g*(e_c - s_2 + s_3 + s_4 ) - (dotm_f*e_3-dotm_a*e_2)     #Ju
-    # loss_combex = flow_air*(e_2 + f*LHV/lamb_ma1 - (1+(1/lamb_ma1))*e_3); #Combustion losses [W]
-    print(e_2)
-    print( f, LHV, lamb_ma1)
-    print((1+(1/lamb_ma1))*e_3)
-    loss_turbine = flow_air*(1+(1/lamb_ma1))*((e_3 - e_4) - (h_3 - h_4)); #Shaft losses at the turbine [W]
-    loss_compressor = flow_air*((h_2 - h_1) - (e_2 - e_1));               #Shaft losses at the compressor [W]
-    loss_rotex = (loss_compressor + loss_turbine);                        #Total shaft losses [W]
-    loss_echex = flow_air*((1+(1/lamb_ma1))*e_4 - e_1);                   #Exhaust gas losses [W]
 
     ## Generate graph to export:
     # ==========================
@@ -355,19 +343,110 @@ def gas_turbine(P_e,options,display):
     #explode = (0, 0, 0, 0)
     plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=140)
     plt.axis('equal')
-    plt.title("Primary energy flux " + "%.1f" %(LHV*dotm_f*1e-6) + " MW")
+    plt.title("Primary energy flux " + "%.1f" %(LHV*dotm_f*1e-3) + " MW")
 
-    # # My 2nd figure: Pie chart exergy
+    # My 2nd figure: Pie chart exergy
     fig_pie_ex = plt.figure(2)
     labels = 'Effective Power \n'+ '%.1f'%(P_e*1e-6)+' MW', 'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW', 'Exhaust losses \n'+'%.1f'%(loss_echex*1e-6)+' MW', 'Turbine & compressor \n irreversibilities \n'+'%.1f'%(loss_rotex*1e-6)+' MW', 'Combustion \n irreversibilities \n'+'%.1f'%(loss_combex*1e-6)+' MW'
     sizes = [P_e*1e-6, loss_mec*1e-6, loss_echex*1e-6, loss_rotex*1e-6, loss_combex*1e-6]
     colors = ['gold', 'yellowgreen', 'lightcoral', 'lightskyblue', 'red']
     #explode = (0, 0, 0, 0)
-    # plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=340)
-    # plt.axis('equal')
-    # plt.title("Primary exergy flux " + "%.1f" %(e_c*dotm_f*1e-6) + " MW")
-    print(sizes)
-    plt.show()
+    plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=300)
+    plt.axis('equal')
+    plt.title("Primary exergy flux " + "%.1f" %(e_c*dotm_f*1e-3) + " MW")
+
+
+    p = (p_1, p_2, p_3, p_4) # [Pa]
+    T = (T_1, T_2, T_3, T_4) # [K]
+    s = (s_1, s_2, s_3, s_4) # [J/kg/K]
+    h = (h_1, h_2, h_3, h_4) # [J/kg]
+    e = (e_1, e_2, e_3, e_4) # [J/kg]
+
+    # init. T, s, h arrays for diagrams
+    n = 10
+
+    T_12 = np.zeros(n)
+    T_23 = np.linspace(T_2, T_3, n)
+    T_34 = np.zeros(n)
+    T_12[0] = T_1
+    T_34[0] = T_3
+    # print(T_12[0])
+
+    p_12 = np.linspace(p_1,p_2,n)#, endpoint = False)
+    p_23 = np.linspace(p_2,p_3,n)#, endpoint = False)
+    p_34 = np.linspace(p_3,p_4,n)#, endpoint = True)
+
+    s_12 = np.ones(n)*s_1
+    s_23 = np.ones(n)*s_2
+    s_34 = np.ones(n)*s_3
+
+    h_12 = np.ones(n)*h_1
+    h_23 = np.ones(n)*h_2
+    h_34 = np.ones(n)*h_3
+
+    for i in range(1,n):
+        # print(i)
+        T_12[i] = getPolytropicTemp(p_12[0], p_12[i], T_12[0], T_12[0], R_Star, eta_pi_c, 100, comp, air_conc)
+        T_34[i] = getPolytropicTemp(p_34[0], p_34[i], T_34[0], T_34[0], R_f , 1/eta_pi_t, 100, comp, flue_conc_mass)
+
+        cp_2 = getMeanCp(p_12[i-1],p_12[i],T_12[i-1],T_12[i], R_Star,comp, air_conc)
+        cp_3 = getMeanCp(p_23[i-1],p_23[i],T_23[i-1],T_23[i], R_f,   comp, flue_conc_mass)
+        cp_4 = getMeanCp(p_34[i-1],p_34[i],T_34[i-1],T_34[i], R_f,   comp, flue_conc_mass)
+
+        s_12[i] = s_12[i-1] + cp_2*np.log(T_12[i]/T_12[i-1]) - R_Star*np.log(p_12[i]/p_12[i-1])
+        s_23[i] = s_23[i-1] + cp_3*np.log(T_23[i]/T_23[i-1]) - R_f   *np.log(p_23[i]/p_23[i-1])
+        s_34[i] = s_34[i-1] + cp_4*np.log(T_34[i]/T_34[i-1]) - R_f   *np.log(p_34[i]/p_34[i-1])
+
+        h_12[i] = h_12[i-1] + cp_2*(T_12[i]-T_12[i-1])
+        h_23[i] = h_23[i-1] + cp_3*(T_23[i]-T_23[i-1])
+        h_34[i] = h_34[i-1] + cp_4*(T_34[i]-T_34[i-1])
+
+
+    s_points = np.append(s_12, [s_23, s_34])*1e-3#, [s_4]] )#*1e-3
+    h_points = np.append(h_12, [h_23, h_34])*1e-3#, [s_4]] )#*1e-3
+    T_points = np.append(T_12, [T_23, T_34])#, [T_4]] )
+
+
+    # My 3rd figure: T-s
+    fig_Ts_diagram = plt.figure(3)
+    plt.scatter(np.array(s)*1e-3, T, c="red")
+    labels = ['1', '2', '3', '4']
+    for i, label in enumerate(labels): #get (0, label)
+        plt.annotate(label,
+                xy=(s[i]*1e-3, T[i]), #show point
+                xytext=(5, 2), #show annotate
+                textcoords='offset points',
+                ha='right',
+                va='bottom')
+    plt.plot(s_points, T_points, c="red")
+    plt.title('T-s diagram of the cycle')
+    plt.xlabel("s $[kJ/kg/K]$")
+    plt.ylabel("T $[K]$")
+
+
+    # My 4th figure: h-s
+    fig_hs_diagram = plt.figure(4)
+    plt.scatter(np.array(s)*1e-3, np.array(h)*1e-3, c="red")
+    labels = ['1', '2', '3', '4'];
+    for i, label in enumerate(labels): #get (0, label)
+        plt.annotate(label,
+                xy=(s[i]*1e-3, h[i]*1e-3), #show point
+                xytext=(5, 2), #show annotate
+                textcoords='offset points',
+                ha='right',
+                va='bottom')
+    plt.plot(s_points, h_points, c="red")
+    plt.title('h-s diagram of the cycle')
+    plt.xlabel("s $[kJ/kg/K]$")
+    plt.ylabel("h $[kJ/kg]$")
+
+    # fig_pie_en.savefig('IMG/pie_en_diag.png', dpi=200)
+    # fig_pie_ex.savefig('IMG/pie_ex_diag.png', dpi=200)
+    # fig_Ts_diagram.savefig('IMG/Ts_diag.png', dpi=200)
+    # fig_hs_diagram.savefig('IMG/hs_diag.png', dpi=200)
+
+    # plt.show()
+
 
     # Process output variables - do not modify---------------------------------
     p = (p_1, p_2, p_3, p_4)

@@ -32,7 +32,7 @@ def brayton():
                     ['2',1800,429 ,443.4 ,0.142,403.2 ],
                     ['3',1710,1400,1681.8,1.265,1317.9],
                     ['4',100 ,654 ,731.5 ,1.348,343.9 ] ]
-    print(tabulate(data_sol, headers=header_sol, tablefmt="pretty"))    #tablefmt="latex_booktabs" for latex export
+    # print(tabulate(data_sol, headers=header_sol, tablefmt="pretty"))    #tablefmt="latex_booktabs" for latex export
 
     header  = ['States', 'p\nkPa', 't\n°C', 'h\nkJ/kg', 's\nkJ/kgK', 'e\nkJ/kg']
     data    = [ ['1','%.0f'%(p[0]/1000), '%.0f'%(T[0]-273.15), '%.1f'%(h[0]/1000), '%.3f'%(s[0]/1000), '%.0f'%(e[0]/1000)],
@@ -40,6 +40,9 @@ def brayton():
                 ['3','%.0f'%(p[2]/1000), '%.0f'%(T[2]-273.15), '%.1f'%(h[2]/1000), '%.3f'%(s[2]/1000), '%.0f'%(e[2]/1000)],
                 ['4','%.0f'%(p[3]/1000), '%.0f'%(T[3]-273.15), '%.1f'%(h[3]/1000), '%.3f'%(s[3]/1000), '%.0f'%(e[3]/1000)] ]
     print(tabulate(data, headers=header, tablefmt="pretty"))    #tablefmt="latex_booktabs" for latex export
+
+    # print(ETA)
+    # print('eta_cyclen: %.2f,\neta_toten %.2f,\neta_cyclex %.2f,\neta_totex %.2f,\neta_rotex %.2f,\neta_combex %.2f' %ETA)
 
 if __name__ == "__main__":
     brayton()
