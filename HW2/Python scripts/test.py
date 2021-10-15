@@ -22,7 +22,7 @@ def brayton():
     eta_pi_t = .90                  # [-]
     k_mec = .015                    # [-]
     options = p_1, T_1, r, eta_pi_c, T_3, k_cc, eta_pi_t, k_mec
-    display = False
+    display = True
 
     ETA, DATEN, DATEX, DAT, MASSFLOW, COMBUSTION, FIG = gas_turbine(P_e,options,display)
     p,T,h,s,e = DAT

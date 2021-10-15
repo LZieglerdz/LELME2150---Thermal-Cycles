@@ -353,7 +353,7 @@ def gas_turbine(P_e,options,display):
     #explode = (0, 0, 0, 0)
     plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=300)
     plt.axis('equal')
-    plt.title("Primary exergy flux " + "%.1f" %(e_c*dotm_f*1e-3) + " MW")
+    plt.title("Primary exergy flux " + "%.1f" %(e_c*dotm_f*1e-3) + " MW", pad=15)
 
 
     p = (p_1, p_2, p_3, p_4) # [Pa]
@@ -447,7 +447,8 @@ def gas_turbine(P_e,options,display):
     fig_Ts_diagram.savefig('IMG/Ts_diag.png', dpi=200)
     fig_hs_diagram.savefig('IMG/hs_diag.png', dpi=200)
 
-    # plt.show()
+    if display:
+        plt.show()
 
 
     # Process output variables - do not modify---------------------------------
