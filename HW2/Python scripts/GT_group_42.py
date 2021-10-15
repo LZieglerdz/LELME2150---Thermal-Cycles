@@ -252,8 +252,8 @@ def gas_turbine(P_e,options,display):
 
     #set references state
     for i in comp:
-        Dmolar = CP.PropsSI("Dmolar", "T", T_S, "P", p_1, i)
-        CP.set_reference_state(i, T_S, Dmolar, 0, 0)
+        Dmolar = CP.PropsSI("Dmolar", "T", T_1, "P", p_1, i)
+        CP.set_reference_state(i, T_1, Dmolar, 0, 0)
 
     # State 1 -- 4->1: Isobar Heat Rejection
     s_1 = .79*CP.PropsSI('S','T', T_1,'P', p_1, "N2") + .21*CP.PropsSI('S','T', T_1,'P', p_1, "O2")
@@ -402,14 +402,13 @@ def gas_turbine(P_e,options,display):
         h_34[i] = h_34[i-1] + cp_4*(T_34[i]-T_34[i-1])
 
 
-    s_points = np.append(s_12, [s_23, s_34])*1e-3#, [s_4]] )#*1e-3
-    h_points = np.append(h_12, [h_23, h_34])*1e-3#, [s_4]] )#*1e-3
+    s_points = np.append(s_12, [s_23, s_34])#, [s_4]] )#*1e-3
+    h_points = np.append(h_12, [h_23, h_34])#, [s_4]] )#*1e-3
     T_points = np.append(T_12, [T_23, T_34])#, [T_4]] )
 
 
     # My 3rd figure: T-s
     fig_Ts_diagram = plt.figure(3)
-    plt.scatter(np.array(s)*1e-3, T, c="red")
     labels = ['1', '2', '3', '4']
     for i, label in enumerate(labels): #get (0, label)
         plt.annotate(label,
@@ -418,7 +417,9 @@ def gas_turbine(P_e,options,display):
                 textcoords='offset points',
                 ha='right',
                 va='bottom')
-    plt.plot(s_points, T_points, c="red")
+    plt.grid(True)
+    plt.plot(s_points*1e-3, T_points, c="red")
+    plt.plot(np.array(s)*1e-3, T, 'ko')
     plt.title('T-s diagram of the cycle')
     plt.xlabel("s $[kJ/kg/K]$")
     plt.ylabel("T $[K]$")
@@ -426,7 +427,6 @@ def gas_turbine(P_e,options,display):
 
     # My 4th figure: h-s
     fig_hs_diagram = plt.figure(4)
-    plt.scatter(np.array(s)*1e-3, np.array(h)*1e-3, c="red")
     labels = ['1', '2', '3', '4'];
     for i, label in enumerate(labels): #get (0, label)
         plt.annotate(label,
@@ -435,15 +435,17 @@ def gas_turbine(P_e,options,display):
                 textcoords='offset points',
                 ha='right',
                 va='bottom')
-    plt.plot(s_points, h_points, c="red")
+    plt.grid(True)
+    plt.plot(s_points*1e-3, h_points*1e-3, c="red")
+    plt.plot(np.array(s)*1e-3, np.array(h)*1e-3, 'ko')
     plt.title('h-s diagram of the cycle')
     plt.xlabel("s $[kJ/kg/K]$")
     plt.ylabel("h $[kJ/kg]$")
 
-    # fig_pie_en.savefig('IMG/pie_en_diag.png', dpi=200)
-    # fig_pie_ex.savefig('IMG/pie_ex_diag.png', dpi=200)
-    # fig_Ts_diagram.savefig('IMG/Ts_diag.png', dpi=200)
-    # fig_hs_diagram.savefig('IMG/hs_diag.png', dpi=200)
+    fig_pie_en.savefig('IMG/pie_en_diag.png', dpi=200)
+    fig_pie_ex.savefig('IMG/pie_ex_diag.png', dpi=200)
+    fig_Ts_diagram.savefig('IMG/Ts_diag.png', dpi=200)
+    fig_hs_diagram.savefig('IMG/hs_diag.png', dpi=200)
 
     # plt.show()
 
