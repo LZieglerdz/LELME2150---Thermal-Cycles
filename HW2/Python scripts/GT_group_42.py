@@ -2,10 +2,11 @@
 LELME2150 - Thermal cycles
 Homework 2 - Exergy and combustion
 
-Signature of the final gas turbine function
+Final gas turbine function
 
-@author: Antoine Laterre
-@date: September 22, 2021
+@author: Laurent, Ziegler de Ziegleck aùf Rheingrüb, 03821500
+         Dimitri, Boterberg                        , 10271700
+@date: September 17, 2021
 """
 
 #
