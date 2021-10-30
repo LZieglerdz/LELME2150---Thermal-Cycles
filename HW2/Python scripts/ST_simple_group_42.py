@@ -2,10 +2,11 @@
 LELME2150 - Thermal cycles
 Homework 2 - Exergy and combustion
 
-Signature of the simple steam turbine function
+Simple steam turbine function
 
-@author: Antoine Laterre
-@date: September 22, 2021
+@author: Laurent, Ziegler de Ziegleck aùf Rheingrüb, 03821500
+         Dimitri, Boterberg                        , 10271700
+@date: September 17, 2021
 """
 
 #
@@ -14,6 +15,7 @@ Signature of the simple steam turbine function
 
 import CoolProp.CoolProp as CP
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 #
@@ -44,17 +46,6 @@ import numpy as np
 #   - You can adapt the numerical application of the text book in page pp. 62
 #   to check your results.
 def steam_turbine(T_1,p_3,T_3,eta_gen,eta_mec,eta_is_t,eta_pump,LHV,P_e):
-    
-    # Replace with your model--------------------------------------------------
-    #p_1, p_2, p_3, p_4 = 0, 0, 0, 0
-    #T_1, T_2, T_3, T_4 = 0, 0, 0, 0
-    #h_1, h_2, h_3, h_4 = 0, 0, 0, 0
-    #s_1, s_2, s_3, s_4 = 0, 0, 0, 0
-    #e_1, e_2, e_3, e_4 = 0, 0, 0, 0
-    #x_1, x_2, x_3, x_4 = 0, 0, 0, 0
-    #eta_cyclen, eta_toten = 0, 0
-    #eta_en = (eta_cyclen, eta_toten)
-    #dot_m_f = 0
     
     #State 1: Saturated liquid
     T_1 = T_1
@@ -126,13 +117,25 @@ def steam_turbine(T_1,p_3,T_3,eta_gen,eta_mec,eta_is_t,eta_pump,LHV,P_e):
     #Mass flow of coal used:
     dot_m_f = dot_m_v*q/(eta_gen*LHV)
     
-    #Losses:
+    #Energetic Losses:
     
     L_mec = dot_m_v*(wm_t-wm_p) - P_e; # Mechanical losses [W]
     
     L_cond = dot_m_v*(h_4-h_1); # Condenser losses [W]
     
     L_gen = dot_m_f*LHV - dot_m_v*q; # Steam generator losses [W]
+    
+    
+    # figure : Energetic balance
+    fig = plt.figure()
+    labels = 'Effective Power \n'+ '%.1f'%(P_e*1e-6)+' MW', 'Mechanical losses \n'+'%.1f'%(L_mec*1e-6)+' MW', 'Condensor loss \n'+'%.1f'%(L_cond*1e-6)+' MW', 'Steam generator losses \n'+'%.1f'%(L_gen*1e-6)+' MW'
+    sizes = [P_e*1e-6, L_mec*1e-6, L_cond*1e-6, L_gen*1e-6]
+    plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=140)
+    plt.axis('equal')
+    plt.title("Primary energy flux " + "%.1f" %(LHV*dot_m_f*1e-6)+ " MW")
+    
+    #plt.show()
+    
     
     # Final outputs - do not modify--------------------------------------------
     p = (p_1, p_2, p_3, p_4)
