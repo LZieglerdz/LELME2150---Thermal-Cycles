@@ -147,8 +147,33 @@ def getMeanCp(p_in, p_out, T_in, T_out, R, mix_comp, mix_conc):               #r
     for i in np.arange(1,n):
         gamma = cp/(cp - i*R)
         p = p_in*(rangeT[i]/T_in)**((gamma-1)/gamma)
-        cp += getCpMix(rangeT[i], rangeP[i], mix_comp, mix_conc)
+        cp += getCpMix(rangeT[i], p, mix_comp, mix_conc)
     return(cp/n)
+
+def getMeanCp_polytropic(p_in, p_out, T_in, T_out, R, eta_pi,iter, mix_comp, mix_conc):       #renvoie le cp massique moyen
+    cp = getCpMix(T_in, p_in, mix_comp, mix_conc)
+
+    if p_in == p_out:
+        return(cp)
+    n=100
+    rangeP = np.linspace(p_in,p_out,n)
+    rangeT = np.ones(n)*T_in
+    for i in np.arange(1,n):
+        rangeT[i] = getPolytropicTemp(rangeP[i-1], rangeP[i], rangeT[i-1], rangeT[i], R, eta_pi, iter, mix_comp, mix_conc)
+    # getPolytropicTemp(p_in, p_out, T_in, T_out, R, eta_pi, iter, mix_comp, mix_conc)
+    p = p_in
+    for i in np.arange(1,n):
+        gamma = cp/(cp - i*R)
+        p = p_in*(rangeT[i]/T_in)**((gamma-1)/gamma)
+        cp += getCpMix(rangeT[i], p, mix_comp, mix_conc)
+    return(cp/n)
+
+
+
+# def getMeanCp2(p_in, p_out, T_in, T_out, mix_comp, mix_conc):               #renvoie le cp massique moyen
+#     f = lambda p, T: getCpMix(T, p, mix_comp, mix_conc)
+#     cp = dblquad(f, p_in, p_out, T_in, T_out )[-1]
+#     return(cp)
 
 #
 #===POLYTROPIC TEMPERATURE=====================================================
@@ -252,10 +277,10 @@ def gas_turbine(P_e,options,display):
 
     #set references state
     for i in comp:
-        Dmolar = CP.PropsSI("Dmolar", "T", T_1, "P", p_1, i)
-        CP.set_reference_state(i, T_1, Dmolar, 0, 0)
-        # Dmolar = CP.PropsSI("Dmolar", "T", T_S, "P", p_S, i)
-        # CP.set_reference_state(i, T_S, Dmolar, 0, 0)
+        # Dmolar = CP.PropsSI("Dmolar", "T", T_1, "P", p_1, i)
+        # CP.set_reference_state(i, T_1, Dmolar, 0, 0)
+        Dmolar = CP.PropsSI("Dmolar", "T", T_S, "P", p_S, i)
+        CP.set_reference_state(i, T_S, Dmolar, 0, 0)
 
     # State 1 -- 4->1: Isobar Heat Rejection
     s_1 = N2_conc*CP.PropsSI('S','T', T_1,'P', p_1, "N2") + O2_conc*CP.PropsSI('S','T', T_1,'P', p_1, "O2")
@@ -265,7 +290,8 @@ def gas_turbine(P_e,options,display):
     # State 2 -- 1->2: Polytropic Compression
     p_2 = r*p_1
     T_2 = getPolytropicTemp(p_1, p_2, T_1, T_1, R_Star, eta_pi_c, 100, comp, air_conc)
-    cp_2 = getMeanCp(p_1,p_2,T_1,T_2, R_Star,comp, air_conc)
+    cp_2 = getMeanCp_polytropic(p_1, p_2, T_1, T_1, R_Star, eta_pi_c, 100, comp, air_conc)
+    # cp_2 = getMeanCp(p_1,p_2,T_1,T_2, R_Star,comp, air_conc)
     h_2 = h_1 + cp_2*(T_2-T_1)
     s_2 = s_1 + cp_2*np.log(T_2/T_1) - R_Star*np.log(p_2/p_1)
     e_2 = (h_2 - h_1) - T_1*(s_2 - s_1)
@@ -287,7 +313,8 @@ def gas_turbine(P_e,options,display):
     # State 4 -- 3->4: Polytropic Expansion
     p_4 = p_1
     T_4 = getPolytropicTemp(p_3, p_4, T_3, T_3, R_f , 1/eta_pi_t, 100, comp, flue_conc_mass)
-    cp_4 = getMeanCp(p_3,p_4,T_4,T_3, R_f, comp, flue_conc_mass)
+    cp_4 = getMeanCp_polytropic(p_3, p_4, T_3, T_3, R_f , 1/eta_pi_t, 100, comp, flue_conc_mass)
+    # cp_4 = getMeanCp(p_3,p_4,T_4,T_3, R_f, comp, flue_conc_mass)
     h_4 = h_3 + cp_4*(T_4-T_3)
     s_4 = s_3 + cp_4*np.log(T_4/T_3) - R_f*np.log(p_4/p_3)
     e_4 = (h_4 - h_1) - T_1*(s_4 - s_1)

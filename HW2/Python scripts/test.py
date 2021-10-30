@@ -6,7 +6,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from tabulate import tabulate
-from GT_group_42 import gas_turbine, get_lambda
+from GT_group_42 import gas_turbine, get_lambda#, getMeanCp, getMeanCp2
 from ST_simple_group_42 import steam_turbine
 
 
@@ -46,3 +46,14 @@ def brayton():
 
 if __name__ == "__main__":
     brayton()
+    # R = 289.0399801464282
+    # p_in = 100e3; p_out = 1800e3
+    # T_in = 15+273.15; T_out = 429+273.15
+    # N2_conc = .79         # %mol
+    # O2_conc = .21         # %mol
+    # H2O_conc = 0          # %mol
+    # CO2_conc = 0          # %mol
+    # comp = ["O2","N2","CO2","H2O"]
+    # air_conc = [O2_conc,N2_conc,CO2_conc,H2O_conc]
+    # print(getMeanCp(p_in, p_out, T_in, T_out, R, comp, air_conc) )
+    # print(getMeanCp2(p_in, p_out, T_in, T_out, comp, air_conc) )
