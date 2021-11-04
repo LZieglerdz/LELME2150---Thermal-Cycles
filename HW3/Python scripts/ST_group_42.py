@@ -152,22 +152,50 @@ def steam_turbine(P_e,options,display):
 
     # CYCLE STATES
 
-    # State 3 -- BOILER OUTPUT
+    # State 3 -- BOILER OUTPUT -- Transformations in boiler are supposed isobaric
     p_3 = p_3
     T_3 = T_max
     h_3 = CP.PropsSI('H','P',p_3,'T',T_3,'Water')
     s_3 = CP.PropsSI('S','P',p_3,'T',T_3,'Water')
     x_3 = CP.PropsSI('Q','P',p_3,'T',T_3,'Water')
-    print(x_3)
     e_3 = exergy(h_3,s_3)
 
-    # State 4 -- HIGH PRESSURE TURBINE OUTPUT
+    # State 4 -- HIGH PRESSURE TURBINE OUTPUT -- Transformations in turbine are supposed adiabatic
+    p_4 = p_4
+    s_4is = s_3
+    h_4is = CP.PropsSI('H','P',p_4,'S',s_4is,'Water')
+    h_4 = h_3 - eta_is_HP*(h_3-h_4is)
+    s_4 = CP.PropsSI('S','P',p_4,'H',h_4,'Water')
+    T_4 = CP.PropsSI('T','P',p_4,'H',h_4,'Water')
+    x_4 = CP.PropsSI('Q','P',p_4,'H',h_4,'Water')
+    e_4 = exergy(h_4,s_4)
 
-    # State 5 -- REHEATING
+    # State 5 -- REHEATING -- cfr state 3
+    p_5 = p_4
+    T_5 = T_max                                         # why 6200 in the book (p91) and not 7000?
+    h_5 = CP.PropsSI('H','P',p_5,'T',T_5,'Water')
+    s_5 = CP.PropsSI('S','P',p_5,'T',T_5,'Water')
+    x_5 = CP.PropsSI('Q','P',p_5,'T',T_5,'Water')
+    e_5 = exergy(h_5,s_5)
 
     # State 6 -- CONDENSER INPUT
+    T_6 = T_cond_out + T_pinch_cond
+    x_6 = x_6
+    p_6 = CP.PropsSI('P','T',T_6,'Q',x_6,'Water')
+    h_6 = CP.PropsSI('H','T',T_6,'Q',x_6,'Water')
+    s_6 = CP.PropsSI('S','T',T_6,'Q',x_6,'Water')
+    e_6 = exergy(h_6,s_6)
 
     # State 7 -- CONDENSER OUTPUT
+    T_7 = T_cond_out
+    x_7 = 0
+    p_7 = CP.PropsSI('P','T',T_7,'Q',x_7,'Water')
+    h_7 = CP.PropsSI('H','T',T_7,'Q',x_7,'Water')
+    s_7 = CP.PropsSI('S','T',T_7,'Q',x_7,'Water')
+    e_7 = exergy(h_7,s_7)
+
+
+
 
     # State 1 -- MAIN PUMP INPUT
 
