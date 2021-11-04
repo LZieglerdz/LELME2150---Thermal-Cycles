@@ -8,14 +8,22 @@ Signature of the final steam turbine function
 @date: October 21, 2021
 """
 
+import CoolProp.CoolProp as CP
+import numpy as np
+import matplotlib.pyplot as plt
+
+#
+#===STEAM CYCLE - TO BE IMPLEMENTED============================================
+#
+
 #
 #===STEAM CYCLE - TO BE IMPLEMENTED============================================
 #
 
 # SPECIFICATIONS:
-#   steam_turbine(P_e,options,display) computes the thermodynamics states for 
-#   the steam power plant of pp. 89, fig 2.33 (combustion, exchanger, cycle)  
-#   based on several inputs (given in options) and based on a given electricity 
+#   steam_turbine(P_e,options,display) computes the thermodynamics states for
+#   the steam power plant of pp. 89, fig 2.33 (combustion, exchanger, cycle)
+#   based on several inputs (given in options) and based on a given electricity
 #   production P_e.  It returns the main results. It can also plot the T-s and
 #   h-s as well as the energy and exergy pies if display == True
 # INPUTS (/!\ some inputs can be dependent on others /!\):
@@ -30,7 +38,7 @@ Signature of the final steam turbine function
 #       o T_exhaust     [K]: exhaust gas temperature out of the chimney
 #       o T_pinch_sub   [K]: pinch temperature at the subcooler
 #       o T_pinch_ex    [K]: pinch temperature at heat exchangers
-#       o T_pinch_cond  [K]: pinch temperature at the condenser 
+#       o T_pinch_cond  [K]: pinch temperature at the condenser
 #       o T_drum        [K]: minimum drum temperature
 #       o x_6           [-]: minimum possible vapor quality after final expansion
 #       o comb          [na]: tuple containing combustion data
@@ -44,6 +52,7 @@ Signature of the final steam turbine function
 #           * eta_is_HP [-]: high pressure turbine isentropic efficiency
 #           * eta_is_LP [-]: low pressure turbine isentropic efficiency
 #   - display: bool to choose to plot the T-s & h-s diagrams and the energy and exergy pie charts (True or False)
+#
 # OUTPUTS: tuple containing...
 #   - DAT: tuple containing the cycle state data (1,2,3, ... , 6,6_I, ... ,9_VII,9_VIII)
 #      o p              [Pa]: tuple containing the pressure at each state
@@ -90,7 +99,7 @@ Signature of the final steam turbine function
 #   - XMASSFLOW: tuple containing the massflow rates in each feedheater (w.r.t. fig. 2.33, pp. 91)
 #       o x_6I          [kg/s]:
 #       o x_6II         [kg/s]:
-#       o x_6...        [kg/s]:    
+#       o x_6...        [kg/s]:
 #       o x_6VIII       [kg/s]:
 #   - FIG: tuple containing the figures to be diplayed
 #       o fig_pie_en: pie chart of energy losses
@@ -98,16 +107,73 @@ Signature of the final steam turbine function
 #       o fig_Ts_diagram: T-s diagram of the GT cycle
 #       o fig_hs_diagram: h-s diagram of the GT cycle
 def steam_turbine(P_e,options,display):
+
+    ###### initialisation -- delete next section when code is functioning as intended #####
+    ##### SECTION #####
+    p_1,p_2,p_3,p_4,p_5,p_6,p_6I,p_6II,p_6III,p_6IV,p_6V,p_6VI,p_6VII,p_6VIII, p_7,p_7I,p_7II,p_7III,p_7IV,p_7V,p_7VI,p_7VII,p_7VIII,p_8,p_9,p_9I,p_9II, p_9III,p_9IV,p_9V,p_9VI,p_9VII,p_9VIII = np.zeros(9+8*3)
+
+    T_1,T_2,T_3,T_4,T_5,T_6,T_6I,T_6II,T_6III,T_6IV,T_6V,T_6VI,T_6VII,T_6VIII, T_7,T_7I,T_7II,T_7III,T_7IV,T_7V,T_7VI,T_7VII,T_7VIII,T_8,T_9,T_9I,T_9II, T_9III,T_9IV,T_9V,T_9VI,T_9VII,T_9VIII = np.zeros(9+8*3)
+
+    s_1,s_2,s_3,s_4,s_5,s_6,s_6I,s_6II,s_6III,s_6IV,s_6V,s_6VI,s_6VII,s_6VIII, s_7,s_7I,s_7II,s_7III,s_7IV,s_7V,s_7VI,s_7VII,s_7VIII,s_8,s_9,s_9I,s_9II, s_9III,s_9IV,s_9V,s_9VI,s_9VII,s_9VIII = np.zeros(9+8*3)
+
+    h_1,h_2,h_3,h_4,h_5,h_6,h_6I,h_6II,h_6III,h_6IV,h_6V,h_6VI,h_6VII,h_6VIII, h_7,h_7I,h_7II,h_7III,h_7IV,h_7V,h_7VI,h_7VII,h_7VIII,h_8,h_9,h_9I,h_9II, h_9III,h_9IV,h_9V,h_9VI,h_9VII,h_9VIII = np.zeros(9+8*3)
+
+    e_1,e_2,e_3,e_4,e_5,e_6,e_6I,e_6II,e_6III,e_6IV,e_6V,e_6VI,e_6VII,e_6VIII, e_7,e_7I,e_7II,e_7III,e_7IV,e_7V,e_7VI,e_7VII,e_7VIII,e_8,e_9,e_9I,e_9II, e_9III,e_9IV,e_9V,e_9VI,e_9VII,e_9VIII = np.zeros(9+8*3)
+
+    x_1,x_2,x_3,x_4,x_5,x_6,x_6I,x_6II,x_6III,x_6IV,x_6V,x_6VI,x_6VII,x_6VIII, x_7,x_7I,x_7II,x_7III,x_7IV,x_7V,x_7VI,x_7VII,x_7VIII,x_8,x_9,x_9I,x_9II, x_9III,x_9IV,x_9V,x_9VI,x_9VII,x_9VIII = np.zeros(9+8*3)
+
+    LHV,e_c,excess_air,cp_gas,gas_prop = np.zeros(5)
+    dotm_a,dotm_f,dotm_g,dotm_v = np.zeros(4)
+    eta_cyclen,eta_toten,eta_cyclex,eta_totex,eta_rotex,eta_combex = np.zeros(6)
+    loss_mec,loss_gen,loss_cond = np.zeros(3)
+    loss_mec,loss_rotex,loss_combex,loss_chemex,loss_transex,loss_totex,loss_condex = np.zeros(7)
+    fig_pie_en,fig_pie_ex,fig_Ts_diagram,fig_hs_diagram = [],[],[],[]
+    ###### END OF SECTION #####
+
     # Process input variables--------------------------------------------------
     p_3,p_4,p_ref,T_ref,T_max,T_cond_out,T_exhaust,T_pinch_sub,T_pinch_ex,T_pinch_cond,T_drum,x_6,comb,eta_mec,eta_pump,eta_turb = options
     Tmax,exc_air,x,y = comb
     eta_is_HP,eta_is_LP = eta_turb
-    
-    # Replace with your model--------------------------------------------------    
-    # xxx
-    # xxx
-    # xxx
-    
+
+    # Ref. State
+    T_ref = T_ref   #[K]
+    p_ref = p_ref   #[Pa]
+    Dmolar = CP.PropsSI("Dmolar", "T", T_ref, "P", p_ref, 'Water')
+    CP.set_reference_state('Water', T_ref, Dmolar, 0, 0)
+
+    h_ref = CP.PropsSI('H','P',p_ref,'T', T_ref,'Water') #[J/kg]
+    s_ref = CP.PropsSI('S','P',p_ref,'T',T_ref,'Water') #[J/kgK]
+    e_ref = 0; # Reference state #[J/kg]
+    print(' %.f\t%.3f\t%.3f' %(h_ref, s_ref, e_ref))
+
+
+    def exergy(h,s):
+        return( (h-h_ref) - T_ref*(s-s_ref) )
+
+    # CYCLE STATES
+
+    # State 3 -- BOILER OUTPUT
+    p_3 = p_3
+    T_3 = T_max
+    h_3 = CP.PropsSI('H','P',p_3,'T',T_3,'Water')
+    s_3 = CP.PropsSI('S','P',p_3,'T',T_3,'Water')
+    x_3 = CP.PropsSI('Q','P',p_3,'T',T_3,'Water')
+    print(x_3)
+    e_3 = exergy(h_3,s_3)
+
+    # State 4 -- HIGH PRESSURE TURBINE OUTPUT
+
+    # State 5 -- REHEATING
+
+    # State 6 -- CONDENSER INPUT
+
+    # State 7 -- CONDENSER OUTPUT
+
+    # State 1 -- MAIN PUMP INPUT
+
+
+
+
     # Process output variables - do not modify---------------------------------
     p = (p_1,p_2,p_3,p_4,p_5,
           p_6,p_6I,p_6II,p_6III,p_6IV,p_6V,p_6VI,p_6VII,p_6VIII,
@@ -134,7 +200,7 @@ def steam_turbine(P_e,options,display):
           e_7,e_7I,e_7II,e_7III,e_7IV,e_7V,e_7VI,e_7VII,e_7VIII,
           e_8,
           e_9,e_9I,e_9II,e_9III,e_9IV,e_9V,e_9VI,e_9VII,e_9VIII)
-    x = (x_1,x_2,x_3,x_4,x_5,
+    x = (x_1,x_2,x_3,x_4,x_5,                                           # PAS OUBLIER DE CONVERTIR LES x=-1 en NaN ou "-"
           x_6,x_6I,x_6II,x_6III,x_6IV,x_6V,x_6VI,x_6VII,x_6VIII,
           x_7,x_7I,x_7II,x_7III,x_7IV,x_7V,x_7VI,x_7VII,x_7VIII,
           x_8,
