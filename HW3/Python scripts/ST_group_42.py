@@ -135,17 +135,19 @@ def steam_turbine(P_e,options,display):
     Tmax,exc_air,x,y = comb
     eta_is_HP,eta_is_LP = eta_turb
 
+
+    #### DO NOT FORGET TO SET IT UP BEFORE SUBMITTING ####
     # Ref. State
     T_ref = T_ref   #[K]
     p_ref = p_ref   #[Pa]
-    Dmolar = CP.PropsSI("Dmolar", "T", T_ref, "P", p_ref, 'Water')
-    CP.set_reference_state('Water', T_ref, Dmolar, 0, 0)
-
+    # Dmolar = CP.PropsSI("Dmolar", "T", T_ref, "P", p_ref, 'Water')
+    # CP.set_reference_state('Water', T_ref, Dmolar, 0, 0)
+    #
     h_ref = CP.PropsSI('H','P',p_ref,'T', T_ref,'Water') #[J/kg]
     s_ref = CP.PropsSI('S','P',p_ref,'T',T_ref,'Water') #[J/kgK]
     e_ref = 0; # Reference state #[J/kg]
-    print(' %.f\t%.3f\t%.3f' %(h_ref, s_ref, e_ref))
-
+    # print(' %.f\t%.3f\t%.3f' %(h_ref, s_ref, e_ref))
+    #
 
     def exergy(h,s):
         return( (h-h_ref) - T_ref*(s-s_ref) )
@@ -160,7 +162,7 @@ def steam_turbine(P_e,options,display):
     x_3 = CP.PropsSI('Q','P',p_3,'T',T_3,'Water')
     e_3 = exergy(h_3,s_3)
 
-    # State 4 -- HIGH PRESSURE TURBINE OUTPUT -- Transformations in turbine are supposed adiabatic
+    # State 4 -- HIGH PRESSURE TURBINE OUTPUT -- Transformations in turbines are supposed adiabatic
     p_4 = p_4
     s_4is = s_3
     h_4is = CP.PropsSI('H','P',p_4,'S',s_4is,'Water')
@@ -194,10 +196,25 @@ def steam_turbine(P_e,options,display):
     s_7 = CP.PropsSI('S','T',T_7,'Q',x_7,'Water')
     e_7 = exergy(h_7,s_7)
 
+    # State 7IV -- DEGASSING DRUM OUTPUT
+    T_7IV = T_drum
+    x_7IV = 0
+    p_7IV = CP.PropsSI('P','T',T_7IV,'Q',x_7IV,'Water')
+    h_7IV = CP.PropsSI('H','T',T_7IV,'Q',x_7IV,'Water')
+    s_7IV = CP.PropsSI('S','T',T_7IV,'Q',x_7IV,'Water')
+    e_7IV = exergy(h_7IV,s_7IV)
 
+    # State 8 -- SECONDARY PUMP (P_e) OUTPUT -- Transformations in pumps are supposed adiabatic
+    p_8 = p_7IV
+    s_8is = s_7
+    h_8is = CP.PropsSI('H','P',p_8,'S',s_8is,'Water')
+    h_8 = h_7 + (h_8is-h_7)/eta_pump
+    s_8 = CP.PropsSI('S','P',p_8,'H',h_8,'Water')
+    T_8 = CP.PropsSI('T','P',p_8,'H',h_8,'Water')
+    x_8 = CP.PropsSI('Q','P',p_8,'H',h_8,'Water')
+    e_8 = exergy(h_8,s_8)
 
-
-    # State 1 -- MAIN PUMP INPUT
+    # State 9IV -- SECONDARY PUMP (P_b) OUTPUT -- Transformations in pumps are supposed adiabatic
 
 
 
