@@ -13,8 +13,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 #
-#===STEAM CYCLE - TO BE IMPLEMENTED============================================
+#===CHECK BEFORE SUBMISSION====================================================
+#   - clean the x_i == -1
+#   - why is p_5 == 6200 [kPa] in the book (p91) and not 7000?
+#   - setting up the reference state; book seems to use the same one as the CoolProp library
+#   - delete the initialization section
 #
+
+def print_red(str):
+    print('\033[31m %s \033[30m' %str)
 
 #
 #===STEAM CYCLE - TO BE IMPLEMENTED============================================
@@ -135,9 +142,8 @@ def steam_turbine(P_e,options,display):
     Tmax,exc_air,x,y = comb
     eta_is_HP,eta_is_LP = eta_turb
 
+    #===Ref. State=============================================================
 
-    #### DO NOT FORGET TO SET IT UP BEFORE SUBMITTING ####
-    # Ref. State
     T_ref = T_ref   #[K]
     p_ref = p_ref   #[Pa]
     # Dmolar = CP.PropsSI("Dmolar", "T", T_ref, "P", p_ref, 'Water')
@@ -145,14 +151,14 @@ def steam_turbine(P_e,options,display):
     #
     h_ref = CP.PropsSI('H','P',p_ref,'T', T_ref,'Water') #[J/kg]
     s_ref = CP.PropsSI('S','P',p_ref,'T',T_ref,'Water') #[J/kgK]
-    e_ref = 0; # Reference state #[J/kg]
+    e_ref = 0  #[J/kg]
     # print(' %.f\t%.3f\t%.3f' %(h_ref, s_ref, e_ref))
     #
 
     def exergy(h,s):
         return( (h-h_ref) - T_ref*(s-s_ref) )
 
-    # CYCLE STATES
+    #===CYCLE STATES===========================================================
 
     # State 3 -- BOILER OUTPUT -- Transformations in boiler are supposed isobaric
     p_3 = p_3
@@ -162,7 +168,7 @@ def steam_turbine(P_e,options,display):
     x_3 = CP.PropsSI('Q','P',p_3,'T',T_3,'Water')
     e_3 = exergy(h_3,s_3)
 
-    # State 4 -- HIGH PRESSURE TURBINE OUTPUT -- Transformations in turbines are supposed adiabatic
+    # State 4 & 6VIII -- HIGH PRESSURE TURBINE OUTPUT -- Transformations in turbines are supposed adiabatic
     p_4 = p_4
     s_4is = s_3
     h_4is = CP.PropsSI('H','P',p_4,'S',s_4is,'Water')
@@ -172,21 +178,59 @@ def steam_turbine(P_e,options,display):
     x_4 = CP.PropsSI('Q','P',p_4,'H',h_4,'Water')
     e_4 = exergy(h_4,s_4)
 
+    p_6VIII = p_4
+    T_6VIII = T_4
+    x_6VIII = x_4
+    h_6VIII = h_4
+    s_6VIII = s_4
+    e_6VIII = e_4
+
     # State 5 -- REHEATING -- cfr state 3
-    p_5 = p_4
-    T_5 = T_max                                         # why 6200 in the book (p91) and not 7000?
+    p_5 = 6200000#p_4
+    T_5 = T_max
     h_5 = CP.PropsSI('H','P',p_5,'T',T_5,'Water')
     s_5 = CP.PropsSI('S','P',p_5,'T',T_5,'Water')
     x_5 = CP.PropsSI('Q','P',p_5,'T',T_5,'Water')
     e_5 = exergy(h_5,s_5)
 
     # State 6 -- CONDENSER INPUT
+    x_6min = x_6
     T_6 = T_cond_out + T_pinch_cond
-    x_6 = x_6
-    p_6 = CP.PropsSI('P','T',T_6,'Q',x_6,'Water')
-    h_6 = CP.PropsSI('H','T',T_6,'Q',x_6,'Water')
-    s_6 = CP.PropsSI('S','T',T_6,'Q',x_6,'Water')
+    p_6 = CP.PropsSI('P','T',T_6,'Q',1,'Water')
+    s_6is = s_5
+    h_6is = CP.PropsSI('H','P',p_6,'S',s_6is,'Water')
+    h_6 = h_5 + (h_6is-h_5)*eta_is_LP
+    x_6 = CP.PropsSI('Q','P',p_6,'H',h_6,'Water')
+    s_6 = CP.PropsSI('S','P',p_6,'H',h_6,'Water')
     e_6 = exergy(h_6,s_6)
+
+    if x_6 < x_6min:
+        print_red('Warning: The steam fraction at the end of the turbine is lower than the minimum acceptable level:\n x_6 = %.2f\n Minimum acceptable value: %.2f' %(x_6, x_6min))
+
+
+    ## State 6 -- BLEEDS
+    h_6_bleeds = np.linspace(h_5,h_6,9)[1:-1][::-1]
+    p_6_bleeds = np.zeros(7)
+    T_6_bleeds = np.zeros(7)
+    x_6_bleeds = np.zeros(7)
+    s_6_bleeds = np.zeros(7)
+    e_6_bleeds = np.zeros(7)
+
+    for i in np.arange(len(h_6_bleeds)):
+        s_6is = s_5
+        h_6is = h_5 + (h_6_bleeds[i]-h_5)/eta_is_LP
+        p_6_bleeds[i] = CP.PropsSI('P','S',s_6is,'H',h_6is,'Water')
+        T_6_bleeds[i] = CP.PropsSI('T','P',p_6_bleeds[i],'H',h_6_bleeds[i],'Water')
+        x_6_bleeds[i] = CP.PropsSI('Q','P',p_6_bleeds[i],'H',h_6_bleeds[i],'Water')
+        s_6_bleeds[i] = CP.PropsSI('S','P',p_6_bleeds[i],'H',h_6_bleeds[i],'Water')
+        e_6_bleeds[i] = exergy(h_6_bleeds[i],s_6_bleeds[i])
+
+    p_6I,p_6II,p_6III,p_6IV,p_6V,p_6VI,p_6VII = p_6_bleeds
+    T_6I,T_6II,T_6III,T_6IV,T_6V,T_6VI,T_6VII = T_6_bleeds
+    x_6I,x_6II,x_6III,x_6IV,x_6V,x_6VI,x_6VII = x_6_bleeds
+    h_6I,h_6II,h_6III,h_6IV,h_6V,h_6VI,h_6VII = h_6_bleeds
+    s_6I,s_6II,s_6III,s_6IV,s_6V,s_6VI,s_6VII = s_6_bleeds
+    e_6I,e_6II,e_6III,e_6IV,e_6V,e_6VI,e_6VII = e_6_bleeds
 
     # State 7 -- CONDENSER OUTPUT
     T_7 = T_cond_out
@@ -196,7 +240,7 @@ def steam_turbine(P_e,options,display):
     s_7 = CP.PropsSI('S','T',T_7,'Q',x_7,'Water')
     e_7 = exergy(h_7,s_7)
 
-    # State 7IV -- DEGASSING DRUM OUTPUT
+    ## State 7IV -- DEGASSING DRUM OUTPUT
     T_7IV = T_drum
     x_7IV = 0
     p_7IV = CP.PropsSI('P','T',T_7IV,'Q',x_7IV,'Water')
@@ -214,7 +258,29 @@ def steam_turbine(P_e,options,display):
     x_8 = CP.PropsSI('Q','P',p_8,'H',h_8,'Water')
     e_8 = exergy(h_8,s_8)
 
-    # State 9IV -- SECONDARY PUMP (P_b) OUTPUT -- Transformations in pumps are supposed adiabatic
+    # State 90 -- SUBCOOLER OUTPUT -- Transformations in heat ex. are supposed isobaric
+    p_9 = p_8
+    T_9 = T_8 - T_pinch_sub
+    h_9 = CP.PropsSI('H','P',p_9,'T',T_9,'Water')
+    s_9 = CP.PropsSI('S','P',p_9,'T',T_9,'Water')
+    x_9 = CP.PropsSI('Q','P',p_9,'T',T_9,'Water')
+    e_9 = exergy(h_9,s_9)
+
+    ## State 9I -- HEAT EX. RI OUTPUT -- Transformations in heat ex. are supposed isobaric
+
+    ## State 9II -- HEAT EX. RII OUTPUT -- Transformations in heat ex. are supposed isobaric
+
+    ## State 9III -- HEAT EX. RIII OUTPUT -- Transformations in heat ex. are supposed isobaric
+
+    ## State 9IV -- SECONDARY PUMP (P_b) OUTPUT -- Transformations in pumps are supposed adiabatic
+
+
+    # # State 1 -- BOILER INPUT -- Transformations in heat ex. are supposed isobaric
+    # p_1 = p_9IV
+    #
+    # # State 2 -- BOILER INPUT -- Transformations in heat ex. are supposed isobaric
+    # #         -- MAIN PUMP OUTPUT -- Transformations in pumps are supposed adiabatic
+    # p_2 = p_3
 
 
 
