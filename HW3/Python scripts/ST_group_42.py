@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 #   - why is p_5 == 6200 [kPa] in the book (p91) and not 7000?
 #   - setting up the reference state; book seems to use the same one as the CoolProp library
 #   - delete the initialization section
-#
+#   - check implementation of min/max value given in options
 
 def print_red(str):
     print('\033[31m %s \033[30m' %str)
