@@ -15,13 +15,17 @@ import matplotlib.pyplot as plt
 #
 #===CHECK BEFORE SUBMISSION====================================================
 #   - clean the x_i == -1
-#   - why is p_5 == 6200 [kPa] in the book (p91) and not 7000?
+#   - why is p_5 == 6200 [kPa] in the book (p91) and not 7000? -> 6200 may be hardcoded! -> don't forget to implement it correctly
+#   - ditto for p_2 and p_3
 #   - setting up the reference state; book seems to use the same one as the CoolProp library
 #   - delete the initialization section
 #   - check implementation of min/max value given in options
+#   - coefficient 1.43 for p_1 arbitrarily chosen to get a pressure similar to what is obtained in the book
 
 def print_red(str):
-    print('\033[31m %s \033[30m' %str)
+    print('\033[31m %s \033[0m' %str)
+def print_green(str):
+    print('\033[32m %s \033[0m' %str)
 
 #
 #===STEAM CYCLE - TO BE IMPLEMENTED============================================
@@ -186,7 +190,8 @@ def steam_turbine(P_e,options,display):
     e_6VIII = e_4
 
     # State 5 -- REHEATING -- cfr state 3
-    p_5 = 6200000#p_4
+    # p_5 = 6200000
+    p_5 = p_4
     T_5 = T_max
     h_5 = CP.PropsSI('H','P',p_5,'T',T_5,'Water')
     s_5 = CP.PropsSI('S','P',p_5,'T',T_5,'Water')
@@ -206,6 +211,8 @@ def steam_turbine(P_e,options,display):
 
     if x_6 < x_6min:
         print_red('Warning: The steam fraction at the end of the turbine is lower than the minimum acceptable value:\n x_6 = %.2f\n Minimum acceptable value: %.2f' %(x_6, x_6min))
+    else:
+        print_green('The steam fraction at the end of the turbine is higher than the minimum acceptable value:\n x_6 = %.2f\n Minimum acceptable value: %.2f' %(x_6, x_6min))
 
     ## State 6 -- BLEEDS
     h_6_bleeds = np.linspace(h_5,h_6,9)[1:-1][::-1]
@@ -248,31 +255,30 @@ def steam_turbine(P_e,options,display):
     # e_7IV = exergy(h_7IV,s_7IV)
 
     ## State 7 -- HEAT EXCH.
-    p_7_bleeds = np.append(p_6_bleeds, p_6VIII)
-    h_7_bleeds = np.ones(8)*np.nan
-    T_7_bleeds = np.ones(8)*np.nan
-    x_7_bleeds = np.ones(8)*np.nan
-    s_7_bleeds = np.ones(8)*np.nan
-    e_7_bleeds = np.ones(8)*np.nan
+    p_7_xch = np.append(p_6_bleeds, p_6VIII)
+    T_7_xch = np.ones(8)*np.nan
+    x_7_xch = np.zeros(8)
+    h_7_xch = np.ones(8)*np.nan
+    s_7_xch = np.ones(8)*np.nan
+    e_7_xch = np.ones(8)*np.nan
 
-    # for i in np.arange(len(h_6_bleeds)):
-    #     s_6is = s_5
-    #     h_6is = h_5 + (h_6_bleeds[i]-h_5)/eta_is_LP
-    #     p_6_bleeds[i] = CP.PropsSI('P','S',s_6is,'H',h_6is,'Water')
-    #     T_6_bleeds[i] = CP.PropsSI('T','P',p_6_bleeds[i],'H',h_6_bleeds[i],'Water')
-    #     x_6_bleeds[i] = CP.PropsSI('Q','P',p_6_bleeds[i],'H',h_6_bleeds[i],'Water')
-    #     s_6_bleeds[i] = CP.PropsSI('S','P',p_6_bleeds[i],'H',h_6_bleeds[i],'Water')
-    #     e_6_bleeds[i] = exergy(h_6_bleeds[i],s_6_bleeds[i])
+    for i in np.arange(len(h_7_xch)):
+        T_7_xch[i] = CP.PropsSI('T','P',p_7_xch[i],'Q',x_7_xch[i],'Water')
+        h_7_xch[i] = CP.PropsSI('H','P',p_7_xch[i],'Q',x_7_xch[i],'Water')
+        s_7_xch[i] = CP.PropsSI('S','P',p_7_xch[i],'Q',x_7_xch[i],'Water')
+        e_7_xch[i] = exergy(h_7_xch[i],s_7_xch[i])
 
-    p_7I,p_7II,p_7III,p_7IV,p_7V,p_7VI,p_7VII,p_7VIII = p_7_bleeds
-    T_7I,T_7II,T_7III,T_7IV,T_7V,T_7VI,T_7VII,T_7VIII = T_7_bleeds
-    x_7I,x_7II,x_7III,x_7IV,x_7V,x_7VI,x_7VII,x_7VIII = x_7_bleeds
-    h_7I,h_7II,h_7III,h_7IV,h_7V,h_7VI,h_7VII,h_7VIII = h_7_bleeds
-    s_7I,s_7II,s_7III,s_7IV,s_7V,s_7VI,s_7VII,s_7VIII = s_7_bleeds
-    e_7I,e_7II,e_7III,e_7IV,e_7V,e_7VI,e_7VII,e_7VIII = e_7_bleeds
+    p_7I,p_7II,p_7III,p_7IV,p_7V,p_7VI,p_7VII,p_7VIII = p_7_xch
+    T_7I,T_7II,T_7III,T_7IV,T_7V,T_7VI,T_7VII,T_7VIII = T_7_xch
+    x_7I,x_7II,x_7III,x_7IV,x_7V,x_7VI,x_7VII,x_7VIII = x_7_xch
+    h_7I,h_7II,h_7III,h_7IV,h_7V,h_7VI,h_7VII,h_7VIII = h_7_xch
+    s_7I,s_7II,s_7III,s_7IV,s_7V,s_7VI,s_7VII,s_7VIII = s_7_xch
+    e_7I,e_7II,e_7III,e_7IV,e_7V,e_7VI,e_7VII,e_7VIII = e_7_xch
 
-
-
+    if T_7IV < T_drum:
+        print_red('Warning: The temperature inside de degassing drum is lower than the minimum acceptable value:\n T_7IV = %.2f\n Minimum acceptable value: %.2f' %(T_7IV, T_drum))
+    else:
+        print_green('The temperature inside de degassing drum is higher than the minimum acceptable value:\n T_7IV = %.2f [°C]\n Minimum acceptable value: %.2f [°C]' %(T_7IV-273.15, T_drum-273.15))
 
     # State 8 -- SECONDARY PUMP (P_e) OUTPUT -- Transformations in pumps are supposed adiabatic
     p_8 = p_7IV
@@ -284,6 +290,14 @@ def steam_turbine(P_e,options,display):
     x_8 = CP.PropsSI('Q','P',p_8,'H',h_8,'Water')
     e_8 = exergy(h_8,s_8)
 
+    # State 1 -- BOILER INPUT -- Transformations in heat ex. are supposed isobaric
+    T_1 = T_7VIII-T_pinch_ex
+    p_1 = CP.PropsSI('P','T',T_1,'Q',0,'Water')*1.43
+    h_1 = CP.PropsSI('H','P',p_1,'T',T_1,'Water')
+    s_1 = CP.PropsSI('S','P',p_1,'T',T_1,'Water')
+    x_1 = CP.PropsSI('Q','P',p_1,'T',T_1,'Water')
+    e_1 = exergy(h_1,s_1)
+
     # State 90 -- SUBCOOLER OUTPUT -- Transformations in heat ex. are supposed isobaric
     p_9 = p_8
     T_9 = T_8 - T_pinch_sub
@@ -292,23 +306,50 @@ def steam_turbine(P_e,options,display):
     x_9 = CP.PropsSI('Q','P',p_9,'T',T_9,'Water')
     e_9 = exergy(h_9,s_9)
 
-    ## State 9I -- HEAT EX. RI OUTPUT -- Transformations in heat ex. are supposed isobaric
+    ## State 9 -- HEAT EXCH.
+    p_9_xch = np.ones(8)*np.nan
+    T_9_xch = np.ones(8)*np.nan
+    x_9_xch = np.zeros(8)
+    h_9_xch = np.ones(8)*np.nan
+    s_9_xch = np.ones(8)*np.nan
+    e_9_xch = np.ones(8)*np.nan
 
-    ## State 9II -- HEAT EX. RII OUTPUT -- Transformations in heat ex. are supposed isobaric
+    p_9_xch[0:3]  = np.ones( len(p_9_xch[0:3]) )*p_7IV
+    p_9_xch[3:-1] = np.ones( len(p_9_xch[3:-1]))*p_1
+    p_9_xch[-1] = p_1
+    for i in np.arange(len(p_9_xch)):
+        if i == 3:
+            s_9IVis = s_7_xch[i]
+            h_9IVis = CP.PropsSI('H','P',p_9_xch[i],'S',s_9IVis,'Water')
+            h_9_xch[i] = h_7_xch[i] + (h_9IVis-h_7_xch[i])/eta_pump
+            s_9_xch[i] = CP.PropsSI('S','P',p_9_xch[i],'H',h_9_xch[i],'Water')
+            T_9_xch[i] = CP.PropsSI('T','P',p_9_xch[i],'H',h_9_xch[i],'Water')
+            x_9_xch[i] = CP.PropsSI('Q','P',p_9_xch[i],'H',h_9_xch[i],'Water')
+            e_9_xch[i] = exergy(h_9_xch[i],s_9_xch[i])
+        else:
+            T_9_xch[i] = T_7_xch[i]-T_pinch_ex
+            h_9_xch[i] = CP.PropsSI('H','P',p_9_xch[i],'T',T_9_xch[i],'Water')
+            s_9_xch[i] = CP.PropsSI('S','P',p_9_xch[i],'T',T_9_xch[i],'Water')
+            e_9_xch[i] = exergy(h_9_xch[i],s_9_xch[i])
 
-    ## State 9III -- HEAT EX. RIII OUTPUT -- Transformations in heat ex. are supposed isobaric
 
-    ## State 9IV -- SECONDARY PUMP (P_b) OUTPUT -- Transformations in pumps are supposed adiabatic
+    p_9I,p_9II,p_9III,p_9IV,p_9V,p_9VI,p_9VII,p_9VIII = p_9_xch
+    T_9I,T_9II,T_9III,T_9IV,T_9V,T_9VI,T_9VII,T_9VIII = T_9_xch
+    x_9I,x_9II,x_9III,x_9IV,x_9V,x_9VI,x_9VII,x_9VIII = x_9_xch
+    h_9I,h_9II,h_9III,h_9IV,h_9V,h_9VI,h_9VII,h_9VIII = h_9_xch
+    s_9I,s_9II,s_9III,s_9IV,s_9V,s_9VI,s_9VII,s_9VIII = s_9_xch
+    e_9I,e_9II,e_9III,e_9IV,e_9V,e_9VI,e_9VII,e_9VIII = e_9_xch
 
-
-    # # State 1 -- BOILER INPUT -- Transformations in heat ex. are supposed isobaric
-    # p_1 = p_9IV
-    #
-    # # State 2 -- BOILER INPUT -- Transformations in heat ex. are supposed isobaric
-    # #         -- MAIN PUMP OUTPUT -- Transformations in pumps are supposed adiabatic
-    # p_2 = p_3
-
-
+    # State 2 -- BOILER INPUT -- Transformations in heat ex. are supposed isobaric
+    #         -- MAIN PUMP OUTPUT -- Transformations in pumps are supposed adiabatic
+    p_2 = p_3
+    s_2is = s_1
+    h_2is = CP.PropsSI('H','P',p_2,'S',s_2is,'Water')
+    h_2 = h_1 + (h_2is-h_1)/eta_pump
+    s_2 = CP.PropsSI('S','P',p_2,'H',h_2,'Water')
+    T_2 = CP.PropsSI('T','P',p_2,'H',h_2,'Water')
+    x_2 = CP.PropsSI('Q','P',p_2,'H',h_2,'Water')
+    e_2 = exergy(h_2,s_2)
 
 
     # Process output variables - do not modify---------------------------------
