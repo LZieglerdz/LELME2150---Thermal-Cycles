@@ -117,17 +117,17 @@ def steam_turbine(P_e,options,display):
 
     ###### initialisation -- delete next section when code is functioning as intended #####
     ##### SECTION #####
-    p_1,p_2,p_3,p_4,p_5,p_6,p_6I,p_6II,p_6III,p_6IV,p_6V,p_6VI,p_6VII,p_6VIII, p_7,p_7I,p_7II,p_7III,p_7IV,p_7V,p_7VI,p_7VII,p_7VIII,p_8,p_9,p_9I,p_9II, p_9III,p_9IV,p_9V,p_9VI,p_9VII,p_9VIII = np.zeros(9+8*3)
+    p_1,p_2,p_3,p_4,p_5,p_6,p_6I,p_6II,p_6III,p_6IV,p_6V,p_6VI,p_6VII,p_6VIII, p_7,p_7I,p_7II,p_7III,p_7IV,p_7V,p_7VI,p_7VII,p_7VIII,p_8,p_9,p_9I,p_9II, p_9III,p_9IV,p_9V,p_9VI,p_9VII,p_9VIII = np.ones(9+8*3)*np.nan
 
-    T_1,T_2,T_3,T_4,T_5,T_6,T_6I,T_6II,T_6III,T_6IV,T_6V,T_6VI,T_6VII,T_6VIII, T_7,T_7I,T_7II,T_7III,T_7IV,T_7V,T_7VI,T_7VII,T_7VIII,T_8,T_9,T_9I,T_9II, T_9III,T_9IV,T_9V,T_9VI,T_9VII,T_9VIII = np.zeros(9+8*3)
+    T_1,T_2,T_3,T_4,T_5,T_6,T_6I,T_6II,T_6III,T_6IV,T_6V,T_6VI,T_6VII,T_6VIII, T_7,T_7I,T_7II,T_7III,T_7IV,T_7V,T_7VI,T_7VII,T_7VIII,T_8,T_9,T_9I,T_9II, T_9III,T_9IV,T_9V,T_9VI,T_9VII,T_9VIII = np.ones(9+8*3)*np.nan
 
-    s_1,s_2,s_3,s_4,s_5,s_6,s_6I,s_6II,s_6III,s_6IV,s_6V,s_6VI,s_6VII,s_6VIII, s_7,s_7I,s_7II,s_7III,s_7IV,s_7V,s_7VI,s_7VII,s_7VIII,s_8,s_9,s_9I,s_9II, s_9III,s_9IV,s_9V,s_9VI,s_9VII,s_9VIII = np.zeros(9+8*3)
+    s_1,s_2,s_3,s_4,s_5,s_6,s_6I,s_6II,s_6III,s_6IV,s_6V,s_6VI,s_6VII,s_6VIII, s_7,s_7I,s_7II,s_7III,s_7IV,s_7V,s_7VI,s_7VII,s_7VIII,s_8,s_9,s_9I,s_9II, s_9III,s_9IV,s_9V,s_9VI,s_9VII,s_9VIII = np.ones(9+8*3)*np.nan
 
-    h_1,h_2,h_3,h_4,h_5,h_6,h_6I,h_6II,h_6III,h_6IV,h_6V,h_6VI,h_6VII,h_6VIII, h_7,h_7I,h_7II,h_7III,h_7IV,h_7V,h_7VI,h_7VII,h_7VIII,h_8,h_9,h_9I,h_9II, h_9III,h_9IV,h_9V,h_9VI,h_9VII,h_9VIII = np.zeros(9+8*3)
+    h_1,h_2,h_3,h_4,h_5,h_6,h_6I,h_6II,h_6III,h_6IV,h_6V,h_6VI,h_6VII,h_6VIII, h_7,h_7I,h_7II,h_7III,h_7IV,h_7V,h_7VI,h_7VII,h_7VIII,h_8,h_9,h_9I,h_9II, h_9III,h_9IV,h_9V,h_9VI,h_9VII,h_9VIII = np.ones(9+8*3)*np.nan
 
-    e_1,e_2,e_3,e_4,e_5,e_6,e_6I,e_6II,e_6III,e_6IV,e_6V,e_6VI,e_6VII,e_6VIII, e_7,e_7I,e_7II,e_7III,e_7IV,e_7V,e_7VI,e_7VII,e_7VIII,e_8,e_9,e_9I,e_9II, e_9III,e_9IV,e_9V,e_9VI,e_9VII,e_9VIII = np.zeros(9+8*3)
+    e_1,e_2,e_3,e_4,e_5,e_6,e_6I,e_6II,e_6III,e_6IV,e_6V,e_6VI,e_6VII,e_6VIII, e_7,e_7I,e_7II,e_7III,e_7IV,e_7V,e_7VI,e_7VII,e_7VIII,e_8,e_9,e_9I,e_9II, e_9III,e_9IV,e_9V,e_9VI,e_9VII,e_9VIII = np.ones(9+8*3)*np.nan
 
-    x_1,x_2,x_3,x_4,x_5,x_6,x_6I,x_6II,x_6III,x_6IV,x_6V,x_6VI,x_6VII,x_6VIII, x_7,x_7I,x_7II,x_7III,x_7IV,x_7V,x_7VI,x_7VII,x_7VIII,x_8,x_9,x_9I,x_9II, x_9III,x_9IV,x_9V,x_9VI,x_9VII,x_9VIII = np.zeros(9+8*3)
+    x_1,x_2,x_3,x_4,x_5,x_6,x_6I,x_6II,x_6III,x_6IV,x_6V,x_6VI,x_6VII,x_6VIII, x_7,x_7I,x_7II,x_7III,x_7IV,x_7V,x_7VI,x_7VII,x_7VIII,x_8,x_9,x_9I,x_9II, x_9III,x_9IV,x_9V,x_9VI,x_9VII,x_9VIII = np.ones(9+8*3)*np.nan
 
     LHV,e_c,excess_air,cp_gas,gas_prop = np.zeros(5)
     dotm_a,dotm_f,dotm_g,dotm_v = np.zeros(4)
@@ -205,16 +205,15 @@ def steam_turbine(P_e,options,display):
     e_6 = exergy(h_6,s_6)
 
     if x_6 < x_6min:
-        print_red('Warning: The steam fraction at the end of the turbine is lower than the minimum acceptable level:\n x_6 = %.2f\n Minimum acceptable value: %.2f' %(x_6, x_6min))
-
+        print_red('Warning: The steam fraction at the end of the turbine is lower than the minimum acceptable value:\n x_6 = %.2f\n Minimum acceptable value: %.2f' %(x_6, x_6min))
 
     ## State 6 -- BLEEDS
     h_6_bleeds = np.linspace(h_5,h_6,9)[1:-1][::-1]
-    p_6_bleeds = np.zeros(7)
-    T_6_bleeds = np.zeros(7)
-    x_6_bleeds = np.zeros(7)
-    s_6_bleeds = np.zeros(7)
-    e_6_bleeds = np.zeros(7)
+    p_6_bleeds = np.ones(7)*np.nan
+    T_6_bleeds = np.ones(7)*np.nan
+    x_6_bleeds = np.ones(7)*np.nan
+    s_6_bleeds = np.ones(7)*np.nan
+    e_6_bleeds = np.ones(7)*np.nan
 
     for i in np.arange(len(h_6_bleeds)):
         s_6is = s_5
@@ -240,13 +239,40 @@ def steam_turbine(P_e,options,display):
     s_7 = CP.PropsSI('S','T',T_7,'Q',x_7,'Water')
     e_7 = exergy(h_7,s_7)
 
-    ## State 7IV -- DEGASSING DRUM OUTPUT
-    T_7IV = T_drum
-    x_7IV = 0
-    p_7IV = CP.PropsSI('P','T',T_7IV,'Q',x_7IV,'Water')
-    h_7IV = CP.PropsSI('H','T',T_7IV,'Q',x_7IV,'Water')
-    s_7IV = CP.PropsSI('S','T',T_7IV,'Q',x_7IV,'Water')
-    e_7IV = exergy(h_7IV,s_7IV)
+    # ## State 7IV -- DEGASSING DRUM OUTPUT
+    # T_7IV = T_drum
+    # x_7IV = 0
+    # p_7IV = CP.PropsSI('P','T',T_7IV,'Q',x_7IV,'Water')
+    # h_7IV = CP.PropsSI('H','T',T_7IV,'Q',x_7IV,'Water')
+    # s_7IV = CP.PropsSI('S','T',T_7IV,'Q',x_7IV,'Water')
+    # e_7IV = exergy(h_7IV,s_7IV)
+
+    ## State 7 -- HEAT EXCH.
+    p_7_bleeds = np.append(p_6_bleeds, p_6VIII)
+    h_7_bleeds = np.ones(8)*np.nan
+    T_7_bleeds = np.ones(8)*np.nan
+    x_7_bleeds = np.ones(8)*np.nan
+    s_7_bleeds = np.ones(8)*np.nan
+    e_7_bleeds = np.ones(8)*np.nan
+
+    # for i in np.arange(len(h_6_bleeds)):
+    #     s_6is = s_5
+    #     h_6is = h_5 + (h_6_bleeds[i]-h_5)/eta_is_LP
+    #     p_6_bleeds[i] = CP.PropsSI('P','S',s_6is,'H',h_6is,'Water')
+    #     T_6_bleeds[i] = CP.PropsSI('T','P',p_6_bleeds[i],'H',h_6_bleeds[i],'Water')
+    #     x_6_bleeds[i] = CP.PropsSI('Q','P',p_6_bleeds[i],'H',h_6_bleeds[i],'Water')
+    #     s_6_bleeds[i] = CP.PropsSI('S','P',p_6_bleeds[i],'H',h_6_bleeds[i],'Water')
+    #     e_6_bleeds[i] = exergy(h_6_bleeds[i],s_6_bleeds[i])
+
+    p_7I,p_7II,p_7III,p_7IV,p_7V,p_7VI,p_7VII,p_7VIII = p_7_bleeds
+    T_7I,T_7II,T_7III,T_7IV,T_7V,T_7VI,T_7VII,T_7VIII = T_7_bleeds
+    x_7I,x_7II,x_7III,x_7IV,x_7V,x_7VI,x_7VII,x_7VIII = x_7_bleeds
+    h_7I,h_7II,h_7III,h_7IV,h_7V,h_7VI,h_7VII,h_7VIII = h_7_bleeds
+    s_7I,s_7II,s_7III,s_7IV,s_7V,s_7VI,s_7VII,s_7VIII = s_7_bleeds
+    e_7I,e_7II,e_7III,e_7IV,e_7V,e_7VI,e_7VII,e_7VIII = e_7_bleeds
+
+
+
 
     # State 8 -- SECONDARY PUMP (P_e) OUTPUT -- Transformations in pumps are supposed adiabatic
     p_8 = p_7IV
