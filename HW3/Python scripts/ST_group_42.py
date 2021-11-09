@@ -246,14 +246,6 @@ def steam_turbine(P_e,options,display):
     s_7 = CP.PropsSI('S','T',T_7,'Q',x_7,'Water')
     e_7 = exergy(h_7,s_7)
 
-    # ## State 7IV -- DEGASSING DRUM OUTPUT
-    # T_7IV = T_drum
-    # x_7IV = 0
-    # p_7IV = CP.PropsSI('P','T',T_7IV,'Q',x_7IV,'Water')
-    # h_7IV = CP.PropsSI('H','T',T_7IV,'Q',x_7IV,'Water')
-    # s_7IV = CP.PropsSI('S','T',T_7IV,'Q',x_7IV,'Water')
-    # e_7IV = exergy(h_7IV,s_7IV)
-
     ## State 7 -- HEAT EXCH.
     p_7_xch = np.append(p_6_bleeds, p_6VIII)
     T_7_xch = np.ones(8)*np.nan
@@ -328,6 +320,7 @@ def steam_turbine(P_e,options,display):
             e_9_xch[i] = exergy(h_9_xch[i],s_9_xch[i])
         else:
             T_9_xch[i] = T_7_xch[i]-T_pinch_ex
+            x_9_xch[i] = CP.PropsSI('Q','P',p_9_xch[i],'T',T_9_xch[i],'Water')
             h_9_xch[i] = CP.PropsSI('H','P',p_9_xch[i],'T',T_9_xch[i],'Water')
             s_9_xch[i] = CP.PropsSI('S','P',p_9_xch[i],'T',T_9_xch[i],'Water')
             e_9_xch[i] = exergy(h_9_xch[i],s_9_xch[i])
@@ -378,11 +371,16 @@ def steam_turbine(P_e,options,display):
           e_7,e_7I,e_7II,e_7III,e_7IV,e_7V,e_7VI,e_7VII,e_7VIII,
           e_8,
           e_9,e_9I,e_9II,e_9III,e_9IV,e_9V,e_9VI,e_9VII,e_9VIII)
-    x = (x_1,x_2,x_3,x_4,x_5,                                           # PAS OUBLIER DE CONVERTIR LES x=-1 en NaN ou "-"
+    x = (x_1,x_2,x_3,x_4,x_5,
           x_6,x_6I,x_6II,x_6III,x_6IV,x_6V,x_6VI,x_6VII,x_6VIII,
           x_7,x_7I,x_7II,x_7III,x_7IV,x_7V,x_7VI,x_7VII,x_7VIII,
           x_8,
           x_9,x_9I,x_9II,x_9III,x_9IV,x_9V,x_9VI,x_9VII,x_9VIII)
+
+    x = np.array(x)
+    x[x==-1] = np.ones(len(x[x==-1]))*np.nan
+    x = tuple(x)
+
     DAT = (p,T,h,s,e,x)
     COMBUSTION = (LHV,e_c,excess_air,cp_gas,gas_prop)
     MASSFLOW = (dotm_a,dotm_f,dotm_g,dotm_v)
