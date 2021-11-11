@@ -465,6 +465,7 @@ def steam_turbine(P_e,options,display):
     #
     #===COMBUSTION=============================================================
     #
+
     def get_ma1(x, y): #Stoechiometric air-to-fuel ratio [-]
         return (Mm_O2+3.76*Mm_N2)*(1+(y-2*x)*0.25)/(Mm_C+Mm_H*y+Mm_O*x);
 
@@ -490,7 +491,7 @@ def steam_turbine(P_e,options,display):
                 Cp = 1.71176*1e3
         else:
             m_water = (y/2)*18/1000; # [kg]
-            HHV = (get_LHV(x,y) + 2375*m_water)*1e3 # [J/kg]
+            HHV = (get_LHV(x,y) + 2375*m_water*1e3) # [J/kg]
             e_c = HHV - 5350*1e3; # [J/kg] T0*S = 5350e3 (S is the carbon entropy at standard conditions)
             Cp = 0.86667*1e3
         return [Cp, e_c]
@@ -536,16 +537,11 @@ def steam_turbine(P_e,options,display):
     #     else:
     #         return( get_lambda(fuel, z, y, x, T_2, T_3, p_2, p_3, iter-1, lam) )
 
-    #
-    #===MEAN CP====================================================================
-    #
-
     def getCpMix(T, p, mix_comp, mix_conc):
         sum = 0
         for i in range(len(mix_comp)):
              sum += (mix_conc[i]*CP.PropsSI('CPMASS', 'T', T, 'P', p, mix_comp[i]) )
         return(sum)
-
 
     def getMeanCp(p_in, p_out, T_in, T_out, R, mix_comp, mix_conc):               #renvoie le cp massique moyen
         cp = getCpMix(T_in, p_in, mix_comp, mix_conc)
@@ -561,21 +557,6 @@ def steam_turbine(P_e,options,display):
             p = p_in*(rangeT[i]/T_in)**((gamma-1)/gamma)
             cp += getCpMix(rangeT[i], rangeP[i], mix_comp, mix_conc)
         return(cp/n)
-
-    #
-    #===POLYTROPIC TEMPERATURE=====================================================
-    #
-    def getPolytropicTemp(p_in, p_out, T_in, T_out, R, eta_pi, iter, mix_comp, mix_conc):
-        if iter < 0:
-            print("Function does not converge.")
-            return(-1)
-        cp = getMeanCp(p_in,p_out,T_in,T_out, R, mix_comp, mix_conc )
-        T = T_in*(p_out/p_in)**(R/(eta_pi*cp))
-        # print(iter, T-273.15, cp)
-        if np.abs(T_out-T) < 1e-12:
-            return(T)
-        else:
-            return(getPolytropicTemp(p_in, p_out, T_in, T, R, eta_pi, iter-1, mix_comp, mix_conc))
 
     ma1 = get_ma1(x,y)
     T_max_comb,lamb,x,y = comb
@@ -613,6 +594,44 @@ def steam_turbine(P_e,options,display):
     print('Air massflow: %.2f [kg/s]' %dot_m_a)
     print('Fuel massflow: %.2f [kg/s]' %dot_m_f)
     print('Flue gas massflow: %.2f [kg/s]' %dot_m_g)
+    print(75*'_')
+
+    #
+    #===EFFICIENCIES===========================================================
+    #
+    e_f = LHV/(lamb_ma1 + 1) - getMeanCp(p_ref, p_ref, T_ref, T_max_comb, R_f, comp, gas_prop)*T_ref*np.log(1 + LHV/((lamb_ma1 + 1)*getMeanCp(p_ref, p_ref, T_ref, T_max_comb, R_f, comp, gas_prop)*T_ref ) )
+    e_exh = 0
+    print(25*'_')
+    for i in range(len(gas_prop)):
+        e_exh += gas_prop[i]*(CP.PropsSI('H','P',p_ref,'T',T_exhaust,comp[i]) + T_ref*CP.PropsSI('S','P',p_ref,'T',T_exhaust,comp[i]))
+        print(gas_prop[i]*1e-3*(CP.PropsSI('H','P',p_ref,'T',T_exhaust,comp[i]) + T_ref*CP.PropsSI('S','P',p_ref,'T',T_exhaust,comp[i])))
+    print(25*'_')
+    print(e_f*1e-3,e_exh*1e-3)
+    e_r = 0
+    eta_cyclen = eta_cyclen   #[-]: cycle energy efficiency                     .489
+    print('eta_cyclen: %.3f [-]' %eta_cyclen)
+    eta_toten = P_e / (dot_m_f*LHV)     #[-]: overall energy efficiency         .457
+    print('eta_toten: %.3f [-]' %eta_toten)
+    eta_cyclex = eta_cyclex   #[-]: cycle exergy efficiency                     .849
+    print('eta_cyclex: %.3f [-]' %eta_cyclex)
+    eta_gen = eta_gen       #[-]: steam generator energy efficiency             .
+    print('eta_gen: %.3f [-]' %eta_gen)
+    eta_combex = dot_m_g*(e_f - e_r)/(dot_m_f*e_c)    #[-]: combustion exergy efficiency                          .689
+    print('eta_combex: %.3f [-]' %eta_combex)
+    eta_chimnex = (e_f-e_exh) / (e_f-e_r)   #[-]: chimney exergy efficiency     .991
+    print('eta_chimnex: %.3f [-]' %eta_chimnex)
+    # eta_condex    #[-]: condenser exergy efficiency                           .
+    # print('eta_condex: %.3f [-]' %eta_condex)
+    # eta_transex   #[-]: bleedings heat exchangers overall exergy efficiency   .766
+    # print('eta_transex: %.3f [-]' %eta_transex)
+    # eta_gex = eta_transex*eta_chimnex*eta_combex       #[-]: steam generator exergy efficiency                     .523
+    # print('eta_gex: %.3f [-]' %eta_gex)
+    # eta_totex = eta_gex*eta_cyclex*eta_mec     #[-]: overall exergy efficiency                             .440.
+    # print('eta_totex: %.3f [-]' %eta_totex)
+    # eta_rotex     #[-]: pumps and turbines exergy efficiency                  .918
+    # print('eta_rotex: %.3f [-]' %eta_rotex)
+    print(75*'_')
+
 
 
 
