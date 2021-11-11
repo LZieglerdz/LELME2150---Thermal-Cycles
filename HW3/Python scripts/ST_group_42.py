@@ -345,6 +345,88 @@ def steam_turbine(P_e,options,display):
     T_2 = CP.PropsSI('T','P',p_2,'H',h_2,'Water')
     x_2 = CP.PropsSI('Q','P',p_2,'H',h_2,'Water')
     e_2 = exergy(h_2,s_2)
+    
+    
+    ## Flow definition (Bleedings) 
+    # ============================
+    nsout=7
+    reheat=1
+    id_drum=3
+    A = np.zeros((nsout+reheat,nsout+reheat));
+    B = np.zeros(nsout+reheat);
+    
+    h9_b = np.array([h_9,h_9I,h_9II,h_9III,h_9IV,h_9V,h_9VI,h_9VII,h_9VIII])
+    h7_b = np.array([h_7,h_7I,h_7II,h_7III,h_7IV,h_7V,h_7VI,h_7VII,h_7VIII])
+    h6_b = np.array([h_6,h_6I,h_6II,h_6III,h_6IV,h_6V,h_6VI,h_6VII,h_6VIII])
+    
+    
+    for i in range(id_drum):
+        for j in range(id_drum):
+            if (i==j):
+                A[i][j] = (h9_b[i+1]-h9_b[i])-(h6_b[i+1]-h7_b[i+1]);
+            elif (j>i):
+                A[i][j] = (h9_b[i+1]-h9_b[i])-(h7_b[i+2]-h7_b[i+1]);
+        B[i] = -(h9_b[i+1]-h9_b[i]);
+    
+    for j in range(nsout+reheat):
+        if j < id_drum :
+            A[id_drum][j] = (h7_b[id_drum+1] - h9_b[id_drum]);
+        elif j==id_drum :
+            A[id_drum][j] = -(h6_b[id_drum+1] - h7_b[id_drum]);
+        else:
+            A[id_drum][j] = -(h7_b[id_drum+1] - h7_b[id_drum+2]);
+        B[id_drum] = -(h7_b[id_drum+1] - h9_b[id_drum]);
+    for i in range(id_drum+1,nsout+reheat):
+        for j in range(nsout+reheat):
+            if (i==j):
+                A[i][j] = (h9_b[i+1]-h9_b[i])-(h6_b[i+1]-h7_b[i+1]);
+            elif (j>i):
+                A[i][j] = (h9_b[i+1]-h9_b[i])-(h7_b[i+2]-h7_b[i+1]);
+        B[i] = -(h9_b[i+1]-h9_b[i]);
+    
+    
+    X = np.linalg.solve(A,B);
+    Xtot = np.sum(X)
+    
+    
+    #Turbine Work
+    WmT = (1+Xtot)*(h_3-h_4)+(h_5-h_6);
+    emT = (1+Xtot)*(e_3-e_4)+(e_5-e_6);
+    
+    #Pump Work
+    WmP = (1+Xtot)*(h_2-h_1);
+    emP = (1+Xtot)*(e_2-e_1);
+    
+    #Steam Generator
+    Qh = (1+Xtot)*(h_3-h_2);
+    eSG = (1+Xtot)*(e_3-e_2);
+    
+    #Condenser
+    Qc = h_6-h_7;
+    eCond = e_6-e_7;
+    
+    Qh += (1+Xtot-X[-1])*(h_5-h_4);
+    eSG += (1+Xtot-X[-1])*(e_5-e_4);
+    
+    e9_b = np.array([e_9,e_9I,e_9II,e_9III,e_9IV,e_9V,e_9VI,e_9VII,e_9VIII])
+    e7_b = np.array([e_7,e_7I,e_7II,e_7III,e_7IV,e_7V,e_7VI,e_7VII,e_7VIII])
+    e6_b = np.array([e_6,e_6I,e_6II,e_6III,e_6IV,e_6V,e_6VI,e_6VII,e_6VIII])
+            
+    for i in range(1,nsout+reheat+1):
+        WmT += X[i-1]*(h_5-h6_b[i]);
+        emT += X[i-1]*(e_5-e6_b[i]);
+
+        WmPe1 = (1+np.sum(X[:id_drum-1]))*(h_8-h_7);
+        emPe1 = (1+np.sum(X[:id_drum-1]))*(e_8-e_7);
+        WmPe2 = (1+Xtot)*(h9_b[id_drum]-h7_b[id_drum]);
+        emPe2 = (1+Xtot)*(e9_b[id_drum]-e7_b[id_drum]);
+        Qc += (1+np.sum(X[:id_drum-1]))*(h7_b[1]-h_7);
+        eCond += (1+np.sum(X[:id_drum-1]))*(e7_b[1]-e_7);
+
+
+    Wmtot = WmT-WmP-WmPe1-WmPe2 # Total work 
+    eta_cyclen = Wmtot/Qh
+    eta_cyclex = Wmtot/eSG
 
     # X_i COMPUTATION
     n = len(h_6_bleeds)
