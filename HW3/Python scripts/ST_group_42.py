@@ -150,9 +150,9 @@ def steam_turbine(P_e,options,display):
 
     T_ref = T_ref   #[K]
     p_ref = p_ref   #[Pa]
-    # Dmolar = CP.PropsSI("Dmolar", "T", T_ref, "P", p_ref, 'Water')
-    # CP.set_reference_state('Water', T_ref, Dmolar, 0, 0)
-    #
+    Dmolar = CP.PropsSI("Dmolar", "T", T_ref, "P", p_ref, 'Water')
+    CP.set_reference_state('Water', T_ref, Dmolar, 0, 0)
+
     h_ref = CP.PropsSI('H','P',p_ref,'T', T_ref,'Water') #[J/kg]
     s_ref = CP.PropsSI('S','P',p_ref,'T',T_ref,'Water') #[J/kgK]
     e_ref = 0  #[J/kg]
@@ -162,7 +162,9 @@ def steam_turbine(P_e,options,display):
     def exergy(h,s):
         return( (h-h_ref) - T_ref*(s-s_ref) )
 
+    #
     #===CYCLE STATES===========================================================
+    #
 
     # State 3 -- BOILER OUTPUT -- Transformations in boiler are supposed isobaric
     p_3 = p_3
@@ -181,13 +183,6 @@ def steam_turbine(P_e,options,display):
     T_4 = CP.PropsSI('T','P',p_4,'H',h_4,'Water')
     x_4 = CP.PropsSI('Q','P',p_4,'H',h_4,'Water')
     e_4 = exergy(h_4,s_4)
-
-    p_6VIII = p_4
-    T_6VIII = T_4
-    x_6VIII = x_4
-    h_6VIII = h_4
-    s_6VIII = s_4
-    e_6VIII = e_4
 
     # State 5 -- REHEATING -- cfr state 3
     # p_5 = 6200000
@@ -231,12 +226,19 @@ def steam_turbine(P_e,options,display):
         s_6_bleeds[i] = CP.PropsSI('S','P',p_6_bleeds[i],'H',h_6_bleeds[i],'Water')
         e_6_bleeds[i] = exergy(h_6_bleeds[i],s_6_bleeds[i])
 
-    p_6I,p_6II,p_6III,p_6IV,p_6V,p_6VI,p_6VII = p_6_bleeds
-    T_6I,T_6II,T_6III,T_6IV,T_6V,T_6VI,T_6VII = T_6_bleeds
-    x_6I,x_6II,x_6III,x_6IV,x_6V,x_6VI,x_6VII = x_6_bleeds
-    h_6I,h_6II,h_6III,h_6IV,h_6V,h_6VI,h_6VII = h_6_bleeds
-    s_6I,s_6II,s_6III,s_6IV,s_6V,s_6VI,s_6VII = s_6_bleeds
-    e_6I,e_6II,e_6III,e_6IV,e_6V,e_6VI,e_6VII = e_6_bleeds
+    p_6_bleeds = np.append(p_6_bleeds,p_4)
+    T_6_bleeds = np.append(T_6_bleeds,T_4)
+    x_6_bleeds = np.append(x_6_bleeds,x_4)
+    h_6_bleeds = np.append(h_6_bleeds,h_4)
+    s_6_bleeds = np.append(s_6_bleeds,s_4)
+    e_6_bleeds = np.append(e_6_bleeds,e_4)
+
+    p_6I,p_6II,p_6III,p_6IV,p_6V,p_6VI,p_6VII,p_6VIII = p_6_bleeds
+    T_6I,T_6II,T_6III,T_6IV,T_6V,T_6VI,T_6VII,T_6VIII = T_6_bleeds
+    x_6I,x_6II,x_6III,x_6IV,x_6V,x_6VI,x_6VII,x_6VIII = x_6_bleeds
+    h_6I,h_6II,h_6III,h_6IV,h_6V,h_6VI,h_6VII,h_6VIII = h_6_bleeds
+    s_6I,s_6II,s_6III,s_6IV,s_6V,s_6VI,s_6VII,s_6VIII = s_6_bleeds
+    e_6I,e_6II,e_6III,e_6IV,e_6V,e_6VI,e_6VII,e_6VIII = e_6_bleeds
 
     # State 7 -- CONDENSER OUTPUT
     T_7 = T_cond_out
@@ -247,7 +249,7 @@ def steam_turbine(P_e,options,display):
     e_7 = exergy(h_7,s_7)
 
     ## State 7 -- HEAT EXCH.
-    p_7_xch = np.append(p_6_bleeds, p_6VIII)
+    p_7_xch = p_6_bleeds
     T_7_xch = np.ones(8)*np.nan
     x_7_xch = np.zeros(8)
     h_7_xch = np.ones(8)*np.nan
@@ -292,7 +294,7 @@ def steam_turbine(P_e,options,display):
 
     # State 90 -- SUBCOOLER OUTPUT -- Transformations in heat ex. are supposed isobaric
     p_9 = p_8
-    T_9 = T_8 - T_pinch_sub
+    T_9 = T_8 + T_pinch_sub
     h_9 = CP.PropsSI('H','P',p_9,'T',T_9,'Water')
     s_9 = CP.PropsSI('S','P',p_9,'T',T_9,'Water')
     x_9 = CP.PropsSI('Q','P',p_9,'T',T_9,'Water')
@@ -343,6 +345,39 @@ def steam_turbine(P_e,options,display):
     T_2 = CP.PropsSI('T','P',p_2,'H',h_2,'Water')
     x_2 = CP.PropsSI('Q','P',p_2,'H',h_2,'Water')
     e_2 = exergy(h_2,s_2)
+
+    # X_i COMPUTATION
+    n = len(h_6_bleeds)
+    A = np.zeros((n,n))
+    b = np.zeros(n-1)
+
+    for i in np.arange(n-1):
+        b[i] = h_9_xch[i] - h_9_xch[i+1]
+    b = np.append(np.append(b[:3], h_9_xch[3]-h_7_xch[3+1]),b[3:])
+    # A[0][0] = (h_9_xch[1]-h_9_xch[0]) + (h_7_xch[0] - h_6_bleeds[1])
+    # b[0] = h_9_xch[0]-h_9_xch[1]
+    # for i in range(1,n-1):
+    #     A[0][i]=(h9[1]-h9[0])+(h7[0]-h7[2])
+    #     b[i] = h_9_xch[i]-h_9_xch[i+1]
+    #     for j in range(1,n-1):
+    #         if i > j:
+    #             A[i][j] = (h_9_xch[i+1]-h_9_xch[i])
+    #         elif i < j:
+    #             A[i][j] = (h_9_xch[i+1]-h_9_xch[i])+(h_7_xch[i+1]-h_7_xch[i+2])
+    #         elif i == j:
+    #             A[i][j] = (h_9_xch[i+1]-h_9_xch[i])+(h_7_xch[i+1]-h_6_bleeds[i+1])
+
+    print(A)
+    print(75*'_')
+    print(b, len(b))
+    print(150*'_')
+
+
+    #
+    #===COMBUSTION=============================================================
+    #
+
+
 
 
     # Process output variables - do not modify---------------------------------
