@@ -608,6 +608,25 @@ def steam_turbine(P_e,options,display):
     print(25*'_')
     print(e_f*1e-3,e_exh*1e-3)
     e_r = 0
+    
+    Cp_w = CP.PropsSI('C','P',p_ref,'T',T_ref,'Water') # Specific heat capacity of water at (p_ref, T_ref) [kJ/kg/K]
+    dot_m_w = (1/(1+Xtot))*dot_m_v*Qc/(Cp_w*(T_cond_out-T_ref)) #[kg/s]: mass flow rate of condensed water
+    
+    print('Condensed water massflow: %.2f [kg/s]' %dot_m_w)
+    
+    h_cond_in = CP.PropsSI('H','P',p_ref,'T',T_ref,'Water')
+    s_cond_in = CP.PropsSI('S','P',p_ref,'T',T_ref,'Water')
+    e_cond_in = exergy(h_cond_in,s_cond_in)
+
+    h_cond_out = CP.PropsSI('H','P',p_ref,'T',T_cond_out,'Water')
+    s_cond_out = CP.PropsSI('S','P',p_ref,'T',T_cond_out,'Water')
+    e_cond_out = exergy(h_cond_out,s_cond_out)
+
+    eta_condex = dot_m_w*(e_cond_out-e_cond_in)/(((1+np.sum(X[:id_drum]))/(1+Xtot))*dot_m_v*eCond);
+    
+    
+    
+    
     eta_cyclen = eta_cyclen   #[-]: cycle energy efficiency                     .489
     print('eta_cyclen: %.3f [-]' %eta_cyclen)
     eta_toten = P_e / (dot_m_f*LHV)     #[-]: overall energy efficiency         .457
@@ -620,8 +639,8 @@ def steam_turbine(P_e,options,display):
     print('eta_combex: %.3f [-]' %eta_combex)
     eta_chimnex = (e_f-e_exh) / (e_f-e_r)   #[-]: chimney exergy efficiency     .991
     print('eta_chimnex: %.3f [-]' %eta_chimnex)
-    # eta_condex    #[-]: condenser exergy efficiency                           .
-    # print('eta_condex: %.3f [-]' %eta_condex)
+    eta_condex = eta_condex   #[-]: condenser exergy efficiency                           .
+    print('eta_condex: %.3f [-]' %eta_condex)
     # eta_transex   #[-]: bleedings heat exchangers overall exergy efficiency   .766
     # print('eta_transex: %.3f [-]' %eta_transex)
     # eta_gex = eta_transex*eta_chimnex*eta_combex       #[-]: steam generator exergy efficiency                     .523
@@ -633,7 +652,29 @@ def steam_turbine(P_e,options,display):
     print(75*'_')
 
 
-
+    
+    
+    
+    ## Generate graph to export:
+    # ==========================
+    
+    # 1st figure : Energetic balance
+    fig_pie_en = plt.figure(1)
+    labels = 'Effective Power \n'+ '%.1f'%(P_e*1e-6)+' MW', 'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW', 'Condensor loss \n'+'%.1f'%(loss_cond*1e-6)+' MW', 'Steam generator losses \n'+'%.1f'%(loss_gen*1e-6)+' MW'
+    sizes = [P_e*1e-6, loss_mec*1e-6, loss_cond*1e-6, loss_gen*1e-6]
+    plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=140)
+    plt.axis('equal')
+    plt.title("Primary energy flux " + "%.1f" %(LHV*dot_m_f*1e-6)+ " MW")
+  
+    # 2nd figure : Exergetic balance
+    fig_pie_ex = plt.figure(2)
+    labels = 'Effective Power \n'+ '%.1f'%(P_e*1e-6)+' MW', 'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW', 'Condenser losses \n'+'%.1f'%(loss_condex*1e-6)+' MW', 'Turbine & pumps \n irreversibilities \n'+'%.1f'%(loss_rotex*1e-6)+' MW', 'Combustion \n irreversibilities \n'+'%.1f'%(loss_combex*1e-6)+' MW', 'Steam generator \n losses \n'+'%.1f'%((loss_gex-loss_combex-loss_chemex)*1e-6)+' MW', 'Chimney losses \n'+'%.1f'%(loss_chemex*1e-6)+' MW', 'Heat transfer irreversibilities \n in the feed-water heaters \n'+'%.1f'%(loss_transex*1e-6)+' MW'
+    sizes = [P_e*1e-6, loss_mec*1e-6, loss_condex*1e-6, loss_rotex*1e-6, loss_combex*1e-6, (loss_gex-loss_combex-loss_chemex)*1e-6, loss_chemex*1e-6, loss_transex*1e-6]
+    plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=30)
+    plt.axis('equal')
+    plt.title("Primary exergy flux " + "%.1f" %(e_c*dot_m_f*1e-6) + " MW")
+    
+    plt.show()
 
     # Process output variables - do not modify---------------------------------
     p = (p_1,p_2,p_3,p_4,p_5,
