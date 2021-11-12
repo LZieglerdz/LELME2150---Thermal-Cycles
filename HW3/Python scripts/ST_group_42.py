@@ -609,7 +609,7 @@ def steam_turbine(P_e,options,display):
     print(e_f*1e-3,e_exh*1e-3)
     e_r = 0
     
-    Cp_w = CP.PropsSI('C','P',p_ref,'T',T_ref,'Water') # Specific heat capacity of water at (p_ref, T_ref) [kJ/kg/K]
+    Cp_w = CP.PropsSI('C','P',p_ref,'T',T_ref,'Water') # Specific heat capacity of water at (p_ref, T_ref) [J/kg/K]
     dot_m_w = (1/(1+Xtot))*dot_m_v*Qc/(Cp_w*(T_cond_out-T_ref)) #[kg/s]: mass flow rate of condensed water
     
     print('Condensed water massflow: %.2f [kg/s]' %dot_m_w)
