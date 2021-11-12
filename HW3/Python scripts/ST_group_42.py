@@ -622,8 +622,8 @@ def steam_turbine(P_e,options,display):
     print('eta_chimnex: %.3f [-]' %eta_chimnex)
     # eta_condex    #[-]: condenser exergy efficiency                           .
     # print('eta_condex: %.3f [-]' %eta_condex)
-    # eta_transex   #[-]: bleedings heat exchangers overall exergy efficiency   .766
-    # print('eta_transex: %.3f [-]' %eta_transex)
+    eta_transex = dot_m_v*(e_3-e_2)/ (dot_m_f*(e_f-e_exh))    #[-]: bleedings heat exchangers overall exergy efficiency   .766
+    print('eta_transex: %.3f [-]' %eta_transex)
     # eta_gex = eta_transex*eta_chimnex*eta_combex       #[-]: steam generator exergy efficiency                     .523
     # print('eta_gex: %.3f [-]' %eta_gex)
     # eta_totex = eta_gex*eta_cyclex*eta_mec     #[-]: overall exergy efficiency                             .440.
