@@ -701,11 +701,10 @@ def steam_turbine(P_e,options,display):
     loss_chemex = (1-eta_chimnex) * dot_m_g * e_f
     loss_totex = (1-eta_totex) * dot_m_f * e_f
     # loss_transex = (1-eta_transex) * dot_m_g * (e_f-e_exh)
-    # loss_FWH = loss_totex - (loss_chemex+loss_combex+loss_condex+loss_rotex+loss_transex+loss_mec)
-    # print(loss_FWH*1e-6)
-    print((loss_gex-loss_combex-loss_chemex-loss_transex)*1e-6)
+    loss_FWH = loss_totex - (loss_gex+loss_condex+loss_rotex+loss_mec)
+    print('loss_FWH:',loss_FWH*1e-6)
 
-    loss_totex = loss_mec + loss_rotex + loss_combex + loss_condex + loss_chemex + loss_transex
+    # loss_totex = loss_mec + loss_rotex + loss_combex + loss_condex + loss_chemex + loss_transex
     print('LOSSES')
     print('loss_mec: %.3f [MW] -- Mechanical losses'      %(loss_mec*1e-6))
     print('loss_gen: %.3f [MW] -- Steam generator losses'      %(loss_gen*1e-6))
@@ -713,7 +712,7 @@ def steam_turbine(P_e,options,display):
     print(75*'_')
     print('loss_mec: %.3f [MW] -- 3MW -- Mechanical losses'      %(loss_mec*1e-6))
     print('loss_rotex: %.3f [MW] -- 26MW -- Turbine & pumps irreversibilities'    %(loss_rotex*1e-6))
-    print('loss_gex: %.3f [MW] --   MW -- Steam generator losses'      %(loss_gex*1e-6))
+    print('loss_gex: %.3f [MW] --   MW -- Steam generator losses -- combex+chemex+transex'      %(loss_gex*1e-6))
     print('loss_combex: %.3f [MW] -- 204MW -- Combustion irreversibilities'   %(loss_combex*1e-6))
     print('loss_chemex: %.3f [MW] -- 4MW -- Chimney losses'   %(loss_chemex*1e-6))
     print('loss_transex: %.3f [MW] -- 104MW -- Heat transfer irreversibilities in the steam generator'  %(loss_transex*1e-6))
@@ -737,21 +736,13 @@ def steam_turbine(P_e,options,display):
     plt.axis('equal')
     plt.title("Primary energy flux " + "%.1f" %(LHV*dot_m_f*1e-6)+ " MW")
 
-    # # 2nd figure : Exergetic balance
-    # fig_pie_ex = plt.figure(2)
-    # labels = 'Effective Power \n'+ '%.1f'%(P_e*1e-6)+' MW',
-    # 'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW',
-    # 'Condenser losses \n'+'%.1f'%(loss_condex*1e-6)+' MW',
-    # 'Turbine & pumps \n irreversibilities \n'+'%.1f'%(loss_rotex*1e-6)+' MW',
-    # 'Combustion \n irreversibilities \n'+'%.1f'%(loss_combex*1e-6)+' MW',
-    # 'Steam generator \n losses \n'+'%.1f'%((loss_gex-loss_combex-loss_chemex)*1e-6)+' MW',
-    # 'Chimney losses \n'+'%.1f'%(loss_chemex*1e-6)+' MW',
-    # 'Heat transfer irreversibilities \n in the feed-water heaters \n'+'%.1f'%(loss_transex*1e-6)+' MW'
-    # sizes = [P_e*1e-6, loss_mec*1e-6, loss_condex*1e-6, loss_rotex*1e-6, loss_combex*1e-6, (loss_gex-loss_combex-loss_chemex)*1e-6, loss_chemex*1e-6, loss_transex*1e-6]
-    # plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=30)
-    # plt.axis('equal')
-    # plt.title("Primary exergy flux " + "%.1f" %(e_c*dot_m_f*1e-6) + " MW")
-    print((loss_gex-loss_combex-loss_chemex)*1e-6)
+    # 2nd figure : Exergetic balance
+    fig_pie_ex = plt.figure(2)
+    labels = ['Effective Power \n'+ '%.1f'%(P_e*1e-6)+' MW',    'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW',    'Condenser losses\n'+'%.1f'%(loss_condex*1e-6)+' MW',    'Turbine & pumps \n irreversibilities \n'+'%.1f'%(loss_rotex*1e-6)+' MW',        'Steam generator \n losses \n'+'%.1f'%((loss_gex-loss_combex-loss_chemex)*1e-6)+' MW',    'Chimney losses \n'+'%.1f'%(loss_chemex*1e-6)+' MW',    'Heat transfer irreversibilities \n in the feed-water heaters \n'+'%.1f'%(loss_transex*1e-6)+' MW','Combustion \n irreversibilities \n'+'%.1f'%(loss_combex*1e-6)+' MW']
+    sizes = [P_e*1e-6, loss_mec*1e-6, loss_condex*1e-6, loss_rotex*1e-6, (loss_gex-loss_combex-loss_chemex)*1e-6, loss_chemex*1e-6, loss_transex*1e-6,loss_combex*1e-6]
+    plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=30)
+    plt.axis('equal')
+    plt.title("Primary exergy flux " + "%.1f" %(e_c*dot_m_f*1e-6) + " MW")
     # plt.show()
 
     # Process output variables - do not modify---------------------------------
