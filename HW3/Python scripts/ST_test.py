@@ -25,30 +25,30 @@ from tabulate import tabulate
 #
 #===TEST CODE==================================================================
 #
-# gr = '42'
-# path = 'ST_group_' + gr;
-# print('\n '+path)
-# steam_turbine = importlib.import_module(path).steam_turbine
-# P_e = 288e+6
-# eta_turb = 0.92,0.90
-# comb = 973.15,1.05,0.05,0.8
-# p_3 = 310e+5
-# p_4 = 70e+5
-# p_ref = 1e+5
-# T_ref = 288.15
-# T_max = 838.15
-# T_cond_out = 305.15
-# T_exhaust = 353.15
-# T_pinch_sub = 0
-# T_pinch_ex = 0
-# T_pinch_cond = 1
-# T_drum = 421.85
-# x_6 = 0.88
-# eta_mec = 0.98
-# eta_pump = 0.85
-# options = p_3,p_4,p_ref,T_ref,T_max,T_cond_out,T_exhaust,T_pinch_sub,T_pinch_ex,T_pinch_cond,T_drum,x_6,comb,eta_mec,eta_pump,eta_turb
-# display = False
-# steam_turbine(P_e,options,display)
+gr = '42'
+path = 'ST_group_' + gr;
+print('\n '+path)
+steam_turbine = importlib.import_module(path).steam_turbine
+P_e = 288e+6
+eta_turb = 0.92,0.90
+comb = 973.15,1.05,0.05,0.8
+p_3 = 310e+5
+p_4 = 70e+5
+p_ref = 1e+5
+T_ref = 288.15
+T_max = 838.15
+T_cond_out = 305.15
+T_exhaust = 353.15
+T_pinch_sub = 0
+T_pinch_ex = 0
+T_pinch_cond = 1
+T_drum = 421.85
+x_6 = 0.88
+eta_mec = 0.98
+eta_pump = 0.85
+options = p_3,p_4,p_ref,T_ref,T_max,T_cond_out,T_exhaust,T_pinch_sub,T_pinch_ex,T_pinch_cond,T_drum,x_6,comb,eta_mec,eta_pump,eta_turb
+display = False
+steam_turbine(P_e,options,display)
 
 
 for gr in GROUPS:
