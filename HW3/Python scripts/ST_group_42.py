@@ -58,6 +58,111 @@ def print_red(str):
 def print_green(str):
     print('\033[32m %s \033[0m' %str)
 
+def get_ma1(x, y): #Stoechiometric air-to-fuel ratio [-]
+    return (Mm_O2+3.76*Mm_N2)*(1+(y-2*x)*0.25)/(Mm_C+Mm_H*y+Mm_O*x);
+
+def get_LHV(x, y): # Lower Heating Value for solid fuels CHyOx
+    LHV_mol = (393400 + 102250*y - x*(111000 + 102250*y)/(1 + y/2))*1e3 # [J/kmol]
+    LHV = LHV_mol/(12 + y + 16*x) # [J/kg]
+    return LHV
+
+def CombEx(x, y): # CHyOx # e_c and Cp of different fuels (from slides of LMECA2150)
+    if x==0: # Combustible of type CHy
+        if y==0: # C
+            e_c = 34160*1e3 # [J/kg]
+            Cp = 0.86667*1e3
+        if y==1.8: # CH1.8
+            e_c = 45710*1e3 # [J/kg]
+            Cp = 1.10434*1e3
+        if y==4: # CH4
+            e_c = 52215*1e3 # [J/kg]
+            Cp = 2.2005*1e3
+    elif y==0: # Combustible of type COx
+        if x==1: # CO
+            e_c = 9845*1e3 # [J/kg]
+            Cp = 1.71176*1e3
+    else:
+        m_water = (y/2)*18/1000; # [kg]
+        HHV = (get_LHV(x,y) + 2375*m_water*1e3) # [J/kg]
+        e_c = HHV - 5350*1e3; # [J/kg] T0*S = 5350e3 (S is the carbon entropy at standard conditions)
+        Cp = 0.86667*1e3
+    return [Cp, e_c]
+
+def FlueGasFrac(x, y, lamb):
+    w = lamb*(1+0.25*(y-2*x));
+    x_O2f = (lamb-1)*(1+0.25*(y-2*x));
+    x_N2f = 3.76*w;
+    x_CO2f = 1;
+    x_H2Of = y/2;
+    x_f = [x_O2f,x_N2f,x_CO2f,x_H2Of];
+    x_O2f = x_O2f/sum(x_f);
+    x_N2f = x_N2f/sum(x_f);
+    x_CO2f = x_CO2f/sum(x_f);
+    x_H2Of = x_H2Of/sum(x_f);
+    Mm_f = Mm_O2*x_O2f + Mm_N2*x_N2f + Mm_CO2*x_CO2f + Mm_H2O*x_H2Of; # Molar mass of fluegas [g/mol]
+    R_f = janaf.R/Mm_f; # Ideal gas constant (R*) for exhaust gas [J/kg/K]
+
+    return [Mm_f, [x_O2f, x_N2f, x_CO2f, x_H2Of], R_f]
+
+# def get_lambda(fuel, z, y, x, T_2, T_3, p_2, p_3,iter, lam_est):
+#     #  Combustion supposée complète
+#     #  C_zH_yO_x + w(O_2 + 3.76 N_2) --> a_0 O_2 + a_2 CO_2 + b_2 H_2O + 3.76w N_2
+#     # comb stoechiometric -> w = z + (y-2*x)/4
+#     # a_2 = z
+#     # 2*b_2 = y
+#     # 2*a_0 + 2*a_2 + b_2 = x + 2*w
+#     w = lam_est*(z + (y-2*x)/4)
+#     a_0 = (x + 2*w - (y/2) - 2*z)/2
+#     Mm_f, flue_conc_mol, R_f = FlueGasFrac(x, y, lam_est)
+#     flue_conc_mass = np.multiply(flue_conc_mol, [Mm_O2, Mm_N2, Mm_CO2, Mm_H2O])/Mm_f
+#
+#     cp_3S = getMeanCp(p_S, p_3, T_S, T_3, R_f, comp, flue_conc_mass)
+#     cp_32 = getMeanCp(p_2, p_3, T_2, T_3, R_f, comp, flue_conc_mass)
+#
+#     lam = (get_LHV(x,y)*1e3-cp_3S*(T_3-T_S))/ (get_ma1(x,y)*cp_32*(T_3-T_2))
+#
+#     if iter == 0:
+#         print('The function get_lambda did not converge.')
+#         return(-1)
+#     if np.abs(lam-lam_est) <= 1e-6 :
+#         return(lam)
+#     else:
+#         return( get_lambda(fuel, z, y, x, T_2, T_3, p_2, p_3, iter-1, lam) )
+
+def getCpMix(T, p, mix_comp, mix_conc):
+    sum = 0
+    for i in range(len(mix_comp)):
+         sum += (mix_conc[i]*CP.PropsSI('CPMASS', 'T', T, 'P', p, mix_comp[i]) )
+    return(sum)
+
+def getMeanCp(p_in, p_out, T_in, T_out, R, mix_comp, mix_conc):               #renvoie le cp massique moyen
+    cp = getCpMix(T_in, p_in, mix_comp, mix_conc)
+
+    if T_in == T_out:
+        return(cp)
+    n=100
+    rangeT = np.linspace(T_in,T_out,n)
+    rangeP = np.ones(n)*p_in
+    p = p_in
+    for i in np.arange(1,n):
+        gamma = cp/(cp - i*R)
+        p = p_in*(rangeT[i]/T_in)**((gamma-1)/gamma)
+        cp += getCpMix(rangeT[i], rangeP[i], mix_comp, mix_conc)
+    return(cp/n)
+
+def getCpBar(pi, pf, Ti, Tf, mix_comp, mix_conc):
+    n=100
+    cp = 0
+
+    rangeT = np.linspace(Ti,Tf,n)
+    rangeP = np.ones(n)*pi
+
+    if Ti == Tf:
+        return(cp)
+
+    for i in range(n):
+        cp += getCpMix(rangeT[i], rangeP[i], mix_comp, mix_conc) * (Tf-Ti) / (n*rangeT[i] * np.log(Tf/Ti))
+    return(cp)
 
 
 #
@@ -467,97 +572,6 @@ def steam_turbine(P_e,options,display):
     #===COMBUSTION=============================================================
     #
 
-    def get_ma1(x, y): #Stoechiometric air-to-fuel ratio [-]
-        return (Mm_O2+3.76*Mm_N2)*(1+(y-2*x)*0.25)/(Mm_C+Mm_H*y+Mm_O*x);
-
-    def get_LHV(x, y): # Lower Heating Value for solid fuels CHyOx
-        LHV_mol = (393400 + 102250*y - x*(111000 + 102250*y)/(1 + y/2))*1e3 # [J/kmol]
-        LHV = LHV_mol/(12 + y + 16*x) # [J/kg]
-        return LHV
-
-    def CombEx(x, y): # CHyOx # e_c and Cp of different fuels (from slides of LMECA2150)
-        if x==0: # Combustible of type CHy
-            if y==0: # C
-                e_c = 34160*1e3 # [J/kg]
-                Cp = 0.86667*1e3
-            if y==1.8: # CH1.8
-                e_c = 45710*1e3 # [J/kg]
-                Cp = 1.10434*1e3
-            if y==4: # CH4
-                e_c = 52215*1e3 # [J/kg]
-                Cp = 2.2005*1e3
-        elif y==0: # Combustible of type COx
-            if x==1: # CO
-                e_c = 9845*1e3 # [J/kg]
-                Cp = 1.71176*1e3
-        else:
-            m_water = (y/2)*18/1000; # [kg]
-            HHV = (get_LHV(x,y) + 2375*m_water*1e3) # [J/kg]
-            e_c = HHV - 5350*1e3; # [J/kg] T0*S = 5350e3 (S is the carbon entropy at standard conditions)
-            Cp = 0.86667*1e3
-        return [Cp, e_c]
-
-    def FlueGasFrac(x, y, lamb):
-        w = lamb*(1+0.25*(y-2*x));
-        x_O2f = (lamb-1)*(1+0.25*(y-2*x));
-        x_N2f = 3.76*w;
-        x_CO2f = 1;
-        x_H2Of = y/2;
-        x_f = [x_O2f,x_N2f,x_CO2f,x_H2Of];
-        x_O2f = x_O2f/sum(x_f);
-        x_N2f = x_N2f/sum(x_f);
-        x_CO2f = x_CO2f/sum(x_f);
-        x_H2Of = x_H2Of/sum(x_f);
-        Mm_f = Mm_O2*x_O2f + Mm_N2*x_N2f + Mm_CO2*x_CO2f + Mm_H2O*x_H2Of; # Molar mass of fluegas [g/mol]
-        R_f = janaf.R/Mm_f; # Ideal gas constant (R*) for exhaust gas [J/kg/K]
-
-        return [Mm_f, [x_O2f, x_N2f, x_CO2f, x_H2Of], R_f]
-
-    # def get_lambda(fuel, z, y, x, T_2, T_3, p_2, p_3,iter, lam_est):
-    #     #  Combustion supposée complète
-    #     #  C_zH_yO_x + w(O_2 + 3.76 N_2) --> a_0 O_2 + a_2 CO_2 + b_2 H_2O + 3.76w N_2
-    #     # comb stoechiometric -> w = z + (y-2*x)/4
-    #     # a_2 = z
-    #     # 2*b_2 = y
-    #     # 2*a_0 + 2*a_2 + b_2 = x + 2*w
-    #     w = lam_est*(z + (y-2*x)/4)
-    #     a_0 = (x + 2*w - (y/2) - 2*z)/2
-    #     Mm_f, flue_conc_mol, R_f = FlueGasFrac(x, y, lam_est)
-    #     flue_conc_mass = np.multiply(flue_conc_mol, [Mm_O2, Mm_N2, Mm_CO2, Mm_H2O])/Mm_f
-    #
-    #     cp_3S = getMeanCp(p_S, p_3, T_S, T_3, R_f, comp, flue_conc_mass)
-    #     cp_32 = getMeanCp(p_2, p_3, T_2, T_3, R_f, comp, flue_conc_mass)
-    #
-    #     lam = (get_LHV(x,y)*1e3-cp_3S*(T_3-T_S))/ (get_ma1(x,y)*cp_32*(T_3-T_2))
-    #
-    #     if iter == 0:
-    #         print('The function get_lambda did not converge.')
-    #         return(-1)
-    #     if np.abs(lam-lam_est) <= 1e-6 :
-    #         return(lam)
-    #     else:
-    #         return( get_lambda(fuel, z, y, x, T_2, T_3, p_2, p_3, iter-1, lam) )
-
-    def getCpMix(T, p, mix_comp, mix_conc):
-        sum = 0
-        for i in range(len(mix_comp)):
-             sum += (mix_conc[i]*CP.PropsSI('CPMASS', 'T', T, 'P', p, mix_comp[i]) )
-        return(sum)
-
-    def getMeanCp(p_in, p_out, T_in, T_out, R, mix_comp, mix_conc):               #renvoie le cp massique moyen
-        cp = getCpMix(T_in, p_in, mix_comp, mix_conc)
-
-        if T_in == T_out:
-            return(cp)
-        n=100
-        rangeT = np.linspace(T_in,T_out,n)
-        rangeP = np.ones(n)*p_in
-        p = p_in
-        for i in np.arange(1,n):
-            gamma = cp/(cp - i*R)
-            p = p_in*(rangeT[i]/T_in)**((gamma-1)/gamma)
-            cp += getCpMix(rangeT[i], rangeP[i], mix_comp, mix_conc)
-        return(cp/n)
 
     ma1 = get_ma1(x,y)
     T_max_comb,lamb,x,y = comb
@@ -576,11 +590,6 @@ def steam_turbine(P_e,options,display):
     eps_exh = ((lamb_ma1+1)*h_exh - lamb_ma1*h_a)/LHV
     eps_p = .01                                 # "we assume there are no unburnt residues etc" -p63
     eta_gen = 1-eps_p-eps_exh
-    print('eps_exh: %.2f [-]' %eps_exh)
-    print('eps_p: %.2f [-]' %eps_p)
-    print('eta_gen: %.2f [-]' %eta_gen)
-    print('Qh: %.2f [J/kg]' %Qh)
-    print('LHV: %.2f [J/kg]' %LHV)
 
     dot_m_vc = P_e / ( eta_mec * Wmtot )
     dot_m_vG = dot_m_vc*(1+Xtot)
@@ -590,23 +599,27 @@ def steam_turbine(P_e,options,display):
     dot_m_a = dot_m_f*lamb_ma1                  #[kg/s]: mass flow rate of air
     dot_m_g = dot_m_a+dot_m_f                   #[kg/s]: mass flow rate of flue gas
 
-    print('Steam massflow (cond.): %.2f [kg/s]' %dot_m_v)
-    print('Steam massflow (boil.): %.2f [kg/s]' %dot_m_vG)
-    print('Air massflow: %.2f [kg/s]' %dot_m_a)
-    print('Fuel massflow: %.2f [kg/s]' %dot_m_f)
-    print('Flue gas massflow: %.2f [kg/s]' %dot_m_g)
-    print(75*'_')
+    # print('eps_exh: %.2f [-]' %eps_exh)
+    # print('eps_p: %.2f [-]' %eps_p)
+    # print('eta_gen: %.2f [-]' %eta_gen)
+    # print('Qh: %.2f [J/kg]' %Qh)
+    # print('LHV: %.2f [J/kg]' %LHV)
+    # print('Steam massflow (cond.): %.2f [kg/s]' %dot_m_v)
+    # print('Steam massflow (boil.): %.2f [kg/s]' %dot_m_vG)
+    # print('Air massflow: %.2f [kg/s]' %dot_m_a)
+    # print('Fuel massflow: %.2f [kg/s]' %dot_m_f)
+    # print('Flue gas massflow: %.2f [kg/s]' %dot_m_g)
+    # print(75*'_')
 
     #
     #===EFFICIENCIES===========================================================
     #
     e_r = 0
     c_pf = getMeanCp(p_ref, p_ref, T_ref, T_max_comb, R_f, comp, gas_prop)
-    c_pf_mean = c_pf/np.log(T_max_comb/T_ref)
-    e_f = LHV/(lamb_ma1 + 1) - c_pf_mean*T_ref*np.log(1 + LHV/((lamb_ma1 + 1)*c_pf*T_ref ) )
-    e_exh = 0
-    for i in range(len(gas_prop)):
-        e_exh += gas_prop[i]*( (CP.PropsSI('H','P',p_ref,'T',T_exhaust,comp[i]) - CP.PropsSI('H','P',p_ref,'T',T_ref,comp[i])) + T_ref*(CP.PropsSI('S','P',p_ref,'T',T_exhaust,comp[i])-CP.PropsSI('S','P',p_ref,'T',T_ref,comp[i]) ) )
+    c_pf_int = getCpBar(p_ref, p_ref, T_ref, T_max_comb, comp, gas_prop)
+    e_f = LHV/(lamb_ma1 + 1) - c_pf_int*T_ref*np.log(1 + LHV/((lamb_ma1 + 1)*c_pf*T_ref ) )
+    e_exh = (getMeanCp(p_ref, p_ref, T_ref, T_max_comb, R_f, comp, gas_prop)*(T_exhaust-T_ref)-h_ref) - T_ref*(getMeanCp(p_ref, p_ref, T_ref, T_max_comb, R_f, comp, gas_prop)*np.log(T_exhaust/T_ref) - s_ref)
+
 
     # print(25*'_')
     # print('e_f (flue gasses after combustion): %.3f [kJ/kg]' %(e_f*1e-3))
@@ -617,7 +630,7 @@ def steam_turbine(P_e,options,display):
     Cp_w = CP.PropsSI('C','P',p_ref,'T',T_ref,'Water') # Specific heat capacity of water at (p_ref, T_ref) [J/kg/K]
     dot_m_w = (1/(1+Xtot))*dot_m_v*Qc/(Cp_w*(T_cond_out-T_ref)) #[kg/s]: mass flow rate of condensed water
 
-    print('Condensed water massflow: %.2f [kg/s]' %dot_m_w)
+    # print('Condensed water massflow: %.2f [kg/s]' %dot_m_w)
 
     h_cond_in = CP.PropsSI('H','P',p_ref,'T',T_ref,'Water')
     s_cond_in = CP.PropsSI('S','P',p_ref,'T',T_ref,'Water')
@@ -627,54 +640,109 @@ def steam_turbine(P_e,options,display):
     s_cond_out = CP.PropsSI('S','P',p_ref,'T',T_cond_out,'Water')
     e_cond_out = exergy(h_cond_out,s_cond_out)
 
-    eta_condex = dot_m_w*(e_cond_out-e_cond_in)/(((1+np.sum(X[:id_drum]))/(1+Xtot))*dot_m_v*eCond);
-
     eta_cyclen = eta_cyclen                                 #[-]: cycle energy efficiency     .489
-    print('eta_cyclen: %.3f [-]' %eta_cyclen)
     eta_toten = P_e / (dot_m_f*LHV)                         #[-]: overall energy efficiency     .457
-    print('eta_toten: %.3f [-]' %eta_toten)
-    eta_cyclex = eta_cyclex                                 #[-]: cycle exergy efficiency     .849
-    print('eta_cyclex: %.3f [-]' %eta_cyclex)
     eta_gen = eta_gen                                       #[-]: steam generator energy efficiency             .
-    print('eta_gen: %.3f [-]' %eta_gen)
-    eta_combex = dot_m_g*(e_f - e_r)/(dot_m_f*e_c)          #[-]: combustion exergy efficiency        .689
-    print('eta_combex: %.3f [-]' %eta_combex)
-    eta_chimnex = (e_f-e_exh) / (e_f-e_r)                   #[-]: chimney exergy efficiency     .991
-    print('eta_chimnex: %.3f [-]' %eta_chimnex)
+
+    eta_cyclex = eta_cyclex        #[-]: cycle exergy efficiency     .849
+    eta_totex = P_e/ (dot_m_f*e_c)      #[-]: overall exergy efficiency  .440
     eta_transex = dot_m_vG*( (1+Xtot)*(e_3-e_2) + (1+Xtot- X[-1])*(e_5-e_4) )/ (dot_m_g*(e_f-e_exh)) #[-]: bleedings heat exchangers overall exergy efficiency    .766
-    print('eta_transex: %.3f [-]' %eta_transex)
-    eta_gex = eta_transex*eta_chimnex*eta_combex            #[-]: steam generator exergy efficiency  .523
-    print('eta_gex: %.3f [-]' %eta_gex)
-    eta_totex = eta_gex*eta_cyclex*eta_mec                  #[-]: overall exergy efficiency  .440
-    print('eta_totex: %.3f [-]' %eta_totex)
-    eta_condex = eta_condex                                 #[-]: condenser exergy efficiency                           .
-    print('eta_condex: %.3f [-]' %eta_condex)
-    eta_rotex =  Wmtot/(emT-emP-emPe1-emPe2)    #[-]: pumps and turbines exergy efficiency  .918
-    print('eta_rotex: %.3f [-]' %eta_rotex)
+    eta_combex = dot_m_g*(e_f - e_r)/(dot_m_f*e_c)      #[-]: combustion exergy efficiency        .689
+    eta_gex = dot_m_vG*( (1+Xtot)*(e_3-e_2) + (1+Xtot- X[-1])*(e_5-e_4) )/(dot_m_f*e_c)     #[-]: steam generator exergy efficiency  .523
+    eta_chimnex = eta_gex / (eta_transex * eta_combex)      #[-]: chimney exergy efficiency     .991
+    eta_condex = dot_m_w*(e_cond_out-e_cond_in)/(((1+np.sum(X[:id_drum]))/(1+Xtot))*dot_m_v*eCond)  #[-]: condenser exergy efficiency                           .
+    eta_rotex =  Wmtot/(emT-emP-emPe1-emPe2)                #[-]: pumps and turbines exergy efficiency  .918
+
+    print('EFFFICIENCIES')
+    print('- energy')
+    print('eta_cyclen: %.3f [-]  -- .489' %eta_cyclen)
+    print('eta_toten: %.3f [-]   -- .457' %eta_toten)
+    print('eta_gen: %.3f [-]     -- ' %eta_gen)
+    print('- exergy')
+    print('eta_cyclex: %.3f [-]  -- .849' %eta_cyclex)
+    print('eta_combex: %.3f [-]  -- .689' %eta_combex)
+    print('eta_chimnex: %.3f [-] -- .991' %eta_chimnex)
+    print('eta_transex: %.3f [-] -- .766' %eta_transex)
+    print('eta_gex: %.3f [-]     -- .523' %eta_gex)
+    print('eta_totex: %.3f [-]   -- .440' %eta_totex)
+    print('eta_condex: %.3f [-]  -- ' %eta_condex)
+    print('eta_rotex: %.3f [-]   -- .918' %eta_rotex)
     print(75*'_')
 
 
+
     #
+    #===LOSSES===========================================================
     #
-    # ## Generate graph to export:
-    # # ==========================
-    #
-    # # 1st figure : Energetic balance
-    # fig_pie_en = plt.figure(1)
-    # labels = 'Effective Power \n'+ '%.1f'%(P_e*1e-6)+' MW', 'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW', 'Condensor loss \n'+'%.1f'%(loss_cond*1e-6)+' MW', 'Steam generator losses \n'+'%.1f'%(loss_gen*1e-6)+' MW'
-    # sizes = [P_e*1e-6, loss_mec*1e-6, loss_cond*1e-6, loss_gen*1e-6]
-    # plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=140)
-    # plt.axis('equal')
-    # plt.title("Primary energy flux " + "%.1f" %(LHV*dot_m_f*1e-6)+ " MW")
-    #
+    loss_gen = dot_m_f*LHV -  dot_m_vG*Qh
+    loss_mec = dot_m_v*Wmtot - P_e
+    loss_cond = (1 + np.sum(X[:id_drum])/(1 + Xtot))*dot_m_v*Qc
+
+    loss_gex = dot_m_f*e_c - dot_m_vG*eSG
+    loss_turbex = dot_m_v*(emT - WmT)
+    loss_pumpex = dot_m_v*((WmP - emP) + (WmPe1 - emPe1) + (WmPe2 - emPe2))
+    loss_rotex = loss_pumpex + loss_turbex
+    loss_combex = dot_m_f*e_c - dot_m_g*e_f
+    loss_condex = (1 + np.sum(X[:id_drum])/(1 + Xtot))*dot_m_v*eCond
+
+    loss_chemex = dot_m_g*(e_f-e_exh)
+
+    loss_transex = 0
+    loss_transex += (1+np.sum(X[:id_drum]))*((e7_b[1]-e_7)-(e9_b[0]-e_8));
+    for i in range(id_drum-1):
+        loss_transex += X[i]*(e6_b[i+1]-e7_b[i+1])+np.sum(X[i:id_drum-1])*(e7_b[i+2]-e7_b[i+1])-(1+np.sum(X[:id_drum]))*(e9_b[i+1]-e9_b[i]);
+    loss_transex += X[id_drum-1]*(e6_b[id_drum]-e7_b[id_drum])-(1+np.sum(X[:id_drum]))*(e9_b[id_drum]-e9_b[id_drum-1]);
+    for i in range(id_drum+1,nsout+reheat-1):
+        loss_transex += X[i]*(e6_b[i+1]-e7_b[i+1])+np.sum(X[i:nsout+reheat-1])*(e7_b[i+2]-e7_b[i+1])-(1+np.sum(X[id_drum+1:nsout+reheat]))*(e9_b[i+1]-e9_b[i]);
+    loss_transex += X[nsout+reheat-1]*(e6_b[nsout+reheat]-e7_b[nsout+reheat])-(1+np.sum(X[id_drum+1:nsout+reheat]))*(e9_b[nsout+reheat]-e9_b[nsout+reheat-1]);
+    loss_transex = loss_transex*dot_m_v
+
+
+    loss_totex = loss_mec + loss_rotex + loss_combex + loss_condex + loss_chemex + loss_transex
+    print('loss_mec: %.3f [MW] -- Mechanical losses'      %(loss_mec*1e-6))
+    print('loss_gen: %.3f [MW] -- Steam generator losses'      %(loss_gen*1e-6))
+    print('loss_cond: %.3f [MW] -- Condensor loss'     %(loss_cond*1e-6))
+    print(75*'_')
+    print('loss_rotex: %.3f [MW] -- Turbine & pumps irreversibilities'    %(loss_rotex*1e-6))
+    print('loss_gex: %.3f [MW]'      %(loss_gex*1e-6))
+    print('loss_combex: %.3f [MW] -- Combustion irreversibilities'   %(loss_combex*1e-6))
+    print('loss_chemex: %.3f [MW] -- Chimney losses'   %(loss_chemex*1e-6))
+    print('loss_transex: %.3f [MW] -- Heat transfer irreversibilities in the feed-water heaters'  %(loss_transex*1e-6))
+    print('loss_condex: %.3f [MW] -- Condenser losses'   %(loss_condex*1e-6))
+    print('loss_totex: %.3f [MW]'    %(loss_totex*1e-6))
+    print((P_e+loss_totex)*1e-6)
+    print(75*'_')
+
+
+
+
+
+    ## Generate graph to export:
+    # ==========================
+
+    # 1st figure : Energetic balance
+    fig_pie_en = plt.figure(1)
+    labels = 'Effective Power \n'+ '%.1f'%(P_e*1e-6)+' MW', 'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW', 'Condensor loss \n'+'%.1f'%(loss_cond*1e-6)+' MW', 'Steam generator losses \n'+'%.1f'%(loss_gen*1e-6)+' MW'
+    sizes = [P_e*1e-6, loss_mec*1e-6, loss_cond*1e-6, loss_gen*1e-6]
+    plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=140)
+    plt.axis('equal')
+    plt.title("Primary energy flux " + "%.1f" %(LHV*dot_m_f*1e-6)+ " MW")
+
     # # 2nd figure : Exergetic balance
     # fig_pie_ex = plt.figure(2)
-    # labels = 'Effective Power \n'+ '%.1f'%(P_e*1e-6)+' MW', 'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW', 'Condenser losses \n'+'%.1f'%(loss_condex*1e-6)+' MW', 'Turbine & pumps \n irreversibilities \n'+'%.1f'%(loss_rotex*1e-6)+' MW', 'Combustion \n irreversibilities \n'+'%.1f'%(loss_combex*1e-6)+' MW', 'Steam generator \n losses \n'+'%.1f'%((loss_gex-loss_combex-loss_chemex)*1e-6)+' MW', 'Chimney losses \n'+'%.1f'%(loss_chemex*1e-6)+' MW', 'Heat transfer irreversibilities \n in the feed-water heaters \n'+'%.1f'%(loss_transex*1e-6)+' MW'
+    # labels = 'Effective Power \n'+ '%.1f'%(P_e*1e-6)+' MW',
+    # 'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW',
+    # 'Condenser losses \n'+'%.1f'%(loss_condex*1e-6)+' MW',
+    # 'Turbine & pumps \n irreversibilities \n'+'%.1f'%(loss_rotex*1e-6)+' MW',
+    # 'Combustion \n irreversibilities \n'+'%.1f'%(loss_combex*1e-6)+' MW',
+    # 'Steam generator \n losses \n'+'%.1f'%((loss_gex-loss_combex-loss_chemex)*1e-6)+' MW',
+    # 'Chimney losses \n'+'%.1f'%(loss_chemex*1e-6)+' MW',
+    # 'Heat transfer irreversibilities \n in the feed-water heaters \n'+'%.1f'%(loss_transex*1e-6)+' MW'
     # sizes = [P_e*1e-6, loss_mec*1e-6, loss_condex*1e-6, loss_rotex*1e-6, loss_combex*1e-6, (loss_gex-loss_combex-loss_chemex)*1e-6, loss_chemex*1e-6, loss_transex*1e-6]
     # plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=30)
     # plt.axis('equal')
     # plt.title("Primary exergy flux " + "%.1f" %(e_c*dot_m_f*1e-6) + " MW")
-    #
+    print((loss_gex-loss_combex-loss_chemex)*1e-6)
     # plt.show()
 
     # Process output variables - do not modify---------------------------------
