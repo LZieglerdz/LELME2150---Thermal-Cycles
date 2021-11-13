@@ -476,7 +476,7 @@ def steam_turbine(P_e,options,display):
     # State 2 -- BOILER INPUT -- Transformations in heat ex. are supposed isobaric
     #         -- MAIN PUMP OUTPUT -- Transformations in pumps are supposed adiabatic
     p_2 = p_3
-    p_5 = 35000000
+    p_2 = 35000000
     s_2is = s_1
     h_2is = CP.PropsSI('H','P',p_2,'S',s_2is,'Water')
     h_2 = h_1 + (h_2is-h_1)/eta_pump
@@ -652,7 +652,7 @@ def steam_turbine(P_e,options,display):
     eta_chimnex = eta_gex / (eta_transex * eta_combex)      #[-]: chimney exergy efficiency     .991
     eta_condex = dot_m_w*(e_cond_out-e_cond_in)/(((1+np.sum(X[:id_drum]))/(1+Xtot))*dot_m_v*eCond)  #[-]: condenser exergy efficiency                           .
     eta_rotex =  Wmtot/(emT-emP-emPe1-emPe2)                #[-]: pumps and turbines exergy efficiency  .918
-
+    #
     print('EFFFICIENCIES')
     print('- energy')
     print('eta_cyclen: %.3f [-]  -- .489' %eta_cyclen)
@@ -669,8 +669,6 @@ def steam_turbine(P_e,options,display):
     print('eta_rotex: %.3f [-]   -- .918' %eta_rotex)
     print(75*'_')
 
-
-
     #
     #===LOSSES===========================================================
     #
@@ -685,30 +683,41 @@ def steam_turbine(P_e,options,display):
     loss_combex = dot_m_f*e_c - dot_m_g*e_f
     loss_condex = (1 + np.sum(X[:id_drum])/(1 + Xtot))*dot_m_v*eCond
 
+    loss_transex = dot_m_g * (e_f-e_exh) - dot_m_vG* ( (1+Xtot)*(e_3-e_2) + (1+Xtot-X[-1])*(e_5-e_4) )
     loss_chemex = dot_m_g*(e_f-e_exh)
 
-    loss_transex = 0
-    loss_transex += (1+np.sum(X[:id_drum]))*((e7_b[1]-e_7)-(e9_b[0]-e_8));
-    for i in range(id_drum-1):
-        loss_transex += X[i]*(e6_b[i+1]-e7_b[i+1])+np.sum(X[i:id_drum-1])*(e7_b[i+2]-e7_b[i+1])-(1+np.sum(X[:id_drum]))*(e9_b[i+1]-e9_b[i]);
-    loss_transex += X[id_drum-1]*(e6_b[id_drum]-e7_b[id_drum])-(1+np.sum(X[:id_drum]))*(e9_b[id_drum]-e9_b[id_drum-1]);
-    for i in range(id_drum+1,nsout+reheat-1):
-        loss_transex += X[i]*(e6_b[i+1]-e7_b[i+1])+np.sum(X[i:nsout+reheat-1])*(e7_b[i+2]-e7_b[i+1])-(1+np.sum(X[id_drum+1:nsout+reheat]))*(e9_b[i+1]-e9_b[i]);
-    loss_transex += X[nsout+reheat-1]*(e6_b[nsout+reheat]-e7_b[nsout+reheat])-(1+np.sum(X[id_drum+1:nsout+reheat]))*(e9_b[nsout+reheat]-e9_b[nsout+reheat-1]);
-    loss_transex = loss_transex*dot_m_v
+    # loss_transex = 0
+    # loss_transex += (1+np.sum(X[:id_drum]))*((e7_b[1]-e_7)-(e9_b[0]-e_8));
+    # for i in range(id_drum-1):
+    #     loss_transex += X[i]*(e6_b[i+1]-e7_b[i+1])+np.sum(X[i:id_drum-1])*(e7_b[i+2]-e7_b[i+1])-(1+np.sum(X[:id_drum]))*(e9_b[i+1]-e9_b[i]);
+    # loss_transex += X[id_drum-1]*(e6_b[id_drum]-e7_b[id_drum])-(1+np.sum(X[:id_drum]))*(e9_b[id_drum]-e9_b[id_drum-1]);
+    # for i in range(id_drum+1,nsout+reheat-1):
+    #     loss_transex += X[i]*(e6_b[i+1]-e7_b[i+1])+np.sum(X[i:nsout+reheat-1])*(e7_b[i+2]-e7_b[i+1])-(1+np.sum(X[id_drum+1:nsout+reheat]))*(e9_b[i+1]-e9_b[i]);
+    # loss_transex += X[nsout+reheat-1]*(e6_b[nsout+reheat]-e7_b[nsout+reheat])-(1+np.sum(X[id_drum+1:nsout+reheat]))*(e9_b[nsout+reheat]-e9_b[nsout+reheat-1]);
+    # loss_transex = loss_transex*dot_m_v
 
+    # "The bad way of computing things"
+    loss_mec = P_e*(1-eta_mec)
+    loss_chemex = (1-eta_chimnex) * dot_m_g * e_f
+    loss_totex = (1-eta_totex) * dot_m_f * e_f
+    # loss_transex = (1-eta_transex) * dot_m_g * (e_f-e_exh)
+    # loss_FWH = loss_totex - (loss_chemex+loss_combex+loss_condex+loss_rotex+loss_transex+loss_mec)
+    # print(loss_FWH*1e-6)
+    print((loss_gex-loss_combex-loss_chemex-loss_transex)*1e-6)
 
     loss_totex = loss_mec + loss_rotex + loss_combex + loss_condex + loss_chemex + loss_transex
+    print('LOSSES')
     print('loss_mec: %.3f [MW] -- Mechanical losses'      %(loss_mec*1e-6))
     print('loss_gen: %.3f [MW] -- Steam generator losses'      %(loss_gen*1e-6))
     print('loss_cond: %.3f [MW] -- Condensor loss'     %(loss_cond*1e-6))
     print(75*'_')
-    print('loss_rotex: %.3f [MW] -- Turbine & pumps irreversibilities'    %(loss_rotex*1e-6))
-    print('loss_gex: %.3f [MW]'      %(loss_gex*1e-6))
-    print('loss_combex: %.3f [MW] -- Combustion irreversibilities'   %(loss_combex*1e-6))
-    print('loss_chemex: %.3f [MW] -- Chimney losses'   %(loss_chemex*1e-6))
-    print('loss_transex: %.3f [MW] -- Heat transfer irreversibilities in the feed-water heaters'  %(loss_transex*1e-6))
-    print('loss_condex: %.3f [MW] -- Condenser losses'   %(loss_condex*1e-6))
+    print('loss_mec: %.3f [MW] -- 3MW -- Mechanical losses'      %(loss_mec*1e-6))
+    print('loss_rotex: %.3f [MW] -- 26MW -- Turbine & pumps irreversibilities'    %(loss_rotex*1e-6))
+    print('loss_gex: %.3f [MW] --   MW -- Steam generator losses'      %(loss_gex*1e-6))
+    print('loss_combex: %.3f [MW] -- 204MW -- Combustion irreversibilities'   %(loss_combex*1e-6))
+    print('loss_chemex: %.3f [MW] -- 4MW -- Chimney losses'   %(loss_chemex*1e-6))
+    print('loss_transex: %.3f [MW] -- 104MW -- Heat transfer irreversibilities in the steam generator'  %(loss_transex*1e-6))
+    print('loss_condex: %.3f [MW] -- 18MW -- Condenser losses'   %(loss_condex*1e-6))
     print('loss_totex: %.3f [MW]'    %(loss_totex*1e-6))
     print((P_e+loss_totex)*1e-6)
     print(75*'_')
