@@ -8,7 +8,11 @@ Signature of the final steam turbine function
 @date: October 21, 2021
 """
 
+import CoolProp
 import CoolProp.CoolProp as CP
+from CoolProp.Plots import PropertyPlot
+from CoolProp.Plots.SimpleCycles import StateContainer
+from CoolProp.Plots.Common import PropertyDict
 import numpy as np
 from thermochem import janaf
 db = janaf.Janafdb();
@@ -22,6 +26,7 @@ import matplotlib.pyplot as plt
 #   - check implementation of min/max value given in options
 #   - coefficient 1.43 for p_1 arbitrarily chosen to get a pressure similar to what is obtained in the book
 #   - check output units
+
 
 
 #
@@ -229,11 +234,6 @@ def getCpBar(pi, pf, Ti, Tf, mix_comp, mix_conc):
 #       o fig_Ts_diagram: T-s diagram of the GT cycle
 #       o fig_hs_diagram: h-s diagram of the GT cycle
 def steam_turbine(P_e,options,display):
-
-    ###### initialisation -- delete next section when code is functioning as intended #####
-    ##### SECTION #####
-    fig_pie_en,fig_pie_ex,fig_Ts_diagram,fig_hs_diagram = [],[],[],[]
-    ###### END OF SECTION #####
 
     # Process input variables--------------------------------------------------
     p_3,p_4,p_ref,T_ref,T_max,T_cond_out,T_exhaust,T_pinch_sub,T_pinch_ex,T_pinch_cond,T_drum,x_6,comb,eta_mec,eta_pump,eta_turb = options
@@ -681,6 +681,298 @@ def steam_turbine(P_e,options,display):
     ## Generate graph to export:
     # ==========================
 
+    n = 50
+
+    h_12 = np.linspace(h_1,h_2,n)
+    s_12 = np.linspace(s_1,s_2,n)
+    T_12 = np.zeros(n)
+    for i in range(n):
+        # s_12[i] = CP.PropsSI('S','P',p_2,'H',h_12[i],'Water')
+        T_12[i] = CP.PropsSI('T','S',s_12[i],'H',h_12[i],'Water')
+
+    T_23 = np.linspace(T_2,T_3,n)
+    s_23 = np.zeros(n)
+    h_23 = np.zeros(n)
+    for i in range(n):
+        s_23[i] = CP.PropsSI('S','P',p_3,'T',T_23[i],'Water')
+        h_23[i] = CP.PropsSI('H','P',p_3,'T',T_23[i],'Water')
+
+    p_34 = np.linspace(p_3,p_4,n)
+    s_34 = np.zeros(n)
+    h_34 = np.zeros(n)
+    T_34 = np.zeros(n)
+    for i in range(n):
+        h_4is = CP.PropsSI('H','P',p_34[i],'S',s_3,'Water')
+        h_34[i] = h_3 + (h_4is-h_3)*eta_is_HP
+        s_34[i] = CP.PropsSI('S','P',p_34[i],'H',h_34[i],'Water')
+        T_34[i] = CP.PropsSI('T','P',p_34[i],'H',h_34[i],'Water')
+
+    T_45 = np.linspace(T_4,T_5,n)
+    s_45 = np.zeros(n)
+    h_45 = np.zeros(n)
+    for i in range(n):
+        s_45[i] = CP.PropsSI('S','P',p_4,'T',T_45[i],'Water')
+        h_45[i] = CP.PropsSI('H','P',p_4,'T',T_45[i],'Water')
+
+    p_56 = np.linspace(p_5,p_6,n)
+    s_56 = np.zeros(n)
+    h_56 = np.zeros(n)
+    T_56 = np.zeros(n)
+    for i in range(n):
+        h_6is = CP.PropsSI('H','P',p_56[i],'S',s_5,'Water')
+        h_56[i] = h_5 + (h_6is-h_5)*eta_is_LP
+        s_56[i] = CP.PropsSI('S','P',p_56[i],'H',h_56[i],'Water')
+        T_56[i] = CP.PropsSI('T','P',p_56[i],'H',h_56[i],'Water')
+
+    T_67 = np.linspace(T_6,T_7,n)
+    x_67 = np.linspace(x_6,x_7,n)
+    s_67 = np.zeros(n)
+    h_67 = np.zeros(n)
+    for i in range(n):
+        s_67[i] = CP.PropsSI('S','Q',x_67[i],'T',T_67[i],'Water')
+        h_67[i] = CP.PropsSI('H','Q',x_67[i],'T',T_67[i],'Water')
+
+    h_78 = np.linspace(h_7,h_8,n)
+    s_78 = np.linspace(s_7,s_8,n)
+    T_78 = np.zeros(n)
+    for i in range(n):
+        # s_12[i] = CP.PropsSI('S','P',p_2,'H',h_12[i],'Water')
+        T_78[i] = CP.PropsSI('T','S',s_78[i],'H',h_78[i],'Water')
+
+    T_89 = np.linspace(T_8,T_9,n)
+    s_89 = np.zeros(n)
+    h_89 = np.zeros(n)
+    for i in range(n):
+        s_89[i] = CP.PropsSI('S','P',p_9,'T',T_89[i],'Water')
+        h_89[i] = CP.PropsSI('H','P',p_9,'T',T_89[i],'Water')
+
+    h_97IV = np.linspace(h_9,h_7IV,n)
+    s_97IV = np.linspace(s_9,s_7IV,n)
+    T_97IV = np.zeros(n)
+    for i in range(n):
+        # s_12[i] = CP.PropsSI('S','P',p_2,'H',h_12[i],'Water')
+        T_97IV[i] = CP.PropsSI('T','S',s_97IV[i],'H',h_97IV[i],'Water')
+
+    h_7IV9IV = np.linspace(h_7IV,h_9IV,n)
+    s_7IV9IV = np.linspace(s_7IV,s_9IV,n)
+    T_7IV9IV = np.zeros(n)
+    for i in range(n):
+        # s_12[i] = CP.PropsSI('S','P',p_2,'H',h_12[i],'Water')
+        T_7IV9IV[i] = CP.PropsSI('T','S',s_7IV9IV[i],'H',h_7IV9IV[i],'Water')
+
+    h_9IV9VIII = np.linspace(h_9IV,h_9VIII,n)
+    s_9IV9VIII = np.linspace(s_9IV,s_9VIII,n)
+    T_9IV9VIII = np.zeros(n)
+    for i in range(n):
+        # s_12[i] = CP.PropsSI('S','P',p_2,'H',h_12[i],'Water')
+        T_9IV9VIII[i] = CP.PropsSI('T','S',s_9IV9VIII[i],'H',h_9IV9VIII[i],'Water')
+
+    h_9VIII1 = np.linspace(h_9VIII,h_1,n)
+    s_9VIII1 = np.linspace(s_9VIII,s_1,n)
+    T_9VIII1 = np.zeros(n)
+    for i in range(n):
+        # s_12[i] = CP.PropsSI('S','P',p_2,'H',h_12[i],'Water')
+        T_9VIII1[i] = CP.PropsSI('T','S',s_9VIII1[i],'H',h_9VIII1[i],'Water')
+
+
+    # BLEEDINGS
+    h_6I7I = np.linspace(h_6I,h_7I,n, endpoint=False)
+    s_6I7I = np.zeros(n)
+    T_6I7I = np.zeros(n)
+    for i in range(n):
+        s_6I7I[i] = CP.PropsSI('S','P',p_6I,'H',h_6I7I[i],'Water')
+        T_6I7I[i] = CP.PropsSI('T','P',p_6I,'H',h_6I7I[i],'Water')
+
+    h_6II7II = np.linspace(h_6II,h_7II,n, endpoint=False)
+    s_6II7II = np.zeros(n)
+    T_6II7II = np.zeros(n)
+    for i in range(n):
+        s_6II7II[i] = CP.PropsSI('S','P',p_6II,'H',h_6II7II[i],'Water')
+        T_6II7II[i] = CP.PropsSI('T','P',p_6II,'H',h_6II7II[i],'Water')
+
+    h_6III7III = np.linspace(h_6III,h_7III,n, endpoint=False)
+    s_6III7III = np.zeros(n)
+    T_6III7III = np.zeros(n)
+    for i in range(n):
+        s_6III7III[i] = CP.PropsSI('S','P',p_6III,'H',h_6III7III[i],'Water')
+        T_6III7III[i] = CP.PropsSI('T','P',p_6III,'H',h_6III7III[i],'Water')
+
+    h_6IV7IV = np.linspace(h_6IV,h_7IV,n, endpoint=False)
+    s_6IV7IV = np.zeros(n)
+    T_6IV7IV = np.zeros(n)
+    for i in range(n):
+        s_6IV7IV[i] = CP.PropsSI('S','P',p_6IV,'H',h_6IV7IV[i],'Water')
+        T_6IV7IV[i] = CP.PropsSI('T','P',p_6IV,'H',h_6IV7IV[i],'Water')
+
+    h_6V7V = np.linspace(h_6V,h_7V,n, endpoint=False)
+    s_6V7V = np.zeros(n)
+    T_6V7V = np.zeros(n)
+    for i in range(n):
+        s_6V7V[i] = CP.PropsSI('S','P',p_6V,'H',h_6V7V[i],'Water')
+        T_6V7V[i] = CP.PropsSI('T','P',p_6V,'H',h_6V7V[i],'Water')
+
+    h_6VI7VI = np.linspace(h_6VI,h_7VI,n, endpoint=False)
+    s_6VI7VI = np.zeros(n)
+    T_6VI7VI = np.zeros(n)
+    for i in range(n):
+        s_6VI7VI[i] = CP.PropsSI('S','P',p_6VI,'H',h_6VI7VI[i],'Water')
+        T_6VI7VI[i] = CP.PropsSI('T','P',p_6VI,'H',h_6VI7VI[i],'Water')
+
+    h_6VII7VII = np.linspace(h_6VII,h_7VII,n, endpoint=False)
+    s_6VII7VII = np.zeros(n)
+    T_6VII7VII = np.zeros(n)
+    for i in range(n):
+        s_6VII7VII[i] = CP.PropsSI('S','P',p_6VII,'H',h_6VII7VII[i],'Water')
+        T_6VII7VII[i] = CP.PropsSI('T','P',p_6VII,'H',h_6VII7VII[i],'Water')
+
+    h_6VIII7VIII = np.linspace(h_6VIII,h_7VIII,n, endpoint=False)
+    s_6VIII7VIII = np.zeros(n)
+    T_6VIII7VIII = np.zeros(n)
+    for i in range(n):
+        s_6VIII7VIII[i] = CP.PropsSI('S','P',p_6VIII,'H',h_6VIII7VIII[i],'Water')
+        T_6VIII7VIII[i] = CP.PropsSI('T','P',p_6VIII,'H',h_6VIII7VIII[i],'Water')
+
+    s_7I7 = np.ones(n)*s_7I
+    p_7I7 = np.linspace(p_7I,p_7,n)
+    h_7I7 = np.zeros(n)
+    T_7I7 = np.zeros(n)
+    for i in range(n):
+        h_7I7[i] = CP.PropsSI('H','S',s_7I7[i],'P',p_7I7[i],'Water')
+        T_7I7[i] = CP.PropsSI('T','S',s_7I7[i],'P',p_7I7[i],'Water')
+
+    s_7II7I = np.ones(n)*s_7II
+    p_7II7I = np.linspace(p_7II,p_7I,n)
+    h_7II7I = np.zeros(n)
+    T_7II7I = np.zeros(n)
+    for i in range(n):
+        h_7II7I[i] = CP.PropsSI('H','S',s_7II7I[i],'P',p_7II7I[i],'Water')
+        T_7II7I[i] = CP.PropsSI('T','S',s_7II7I[i],'P',p_7II7I[i],'Water')
+
+    s_7III7II = np.ones(n)*s_7III
+    p_7III7II = np.linspace(p_7III,p_7II,n)
+    h_7III7II = np.zeros(n)
+    T_7III7II = np.zeros(n)
+    for i in range(n):
+        h_7III7II[i] = CP.PropsSI('H','S',s_7III7II[i],'P',p_7III7II[i],'Water')
+        T_7III7II[i] = CP.PropsSI('T','S',s_7III7II[i],'P',p_7III7II[i],'Water')
+
+    s_7IV7III = np.ones(n)*s_7IV
+    p_7IV7III = np.linspace(p_7IV,p_7III,n)
+    h_7IV7III = np.zeros(n)
+    T_7IV7III = np.zeros(n)
+    for i in range(n):
+        h_7IV7III[i] = CP.PropsSI('H','S',s_7IV7III[i],'P',p_7IV7III[i],'Water')
+        T_7IV7III[i] = CP.PropsSI('T','S',s_7IV7III[i],'P',p_7IV7III[i],'Water')
+
+    s_7V7IV = np.ones(n)*s_7V
+    p_7V7IV = np.linspace(p_7V,p_7IV,n)
+    h_7V7IV = np.zeros(n)
+    T_7V7IV = np.zeros(n)
+    for i in range(n):
+        h_7V7IV[i] = CP.PropsSI('H','S',s_7V7IV[i],'P',p_7V7IV[i],'Water')
+        T_7V7IV[i] = CP.PropsSI('T','S',s_7V7IV[i],'P',p_7V7IV[i],'Water')
+
+    s_7VI7V = np.ones(n)*s_7VI
+    p_7VI7V = np.linspace(p_7VI,p_7V,n)
+    h_7VI7V = np.zeros(n)
+    T_7VI7V = np.zeros(n)
+    for i in range(n):
+        h_7VI7V[i] = CP.PropsSI('H','S',s_7VI7V[i],'P',p_7VI7V[i],'Water')
+        T_7VI7V[i] = CP.PropsSI('T','S',s_7VI7V[i],'P',p_7VI7V[i],'Water')
+
+    s_7VII7VI = np.ones(n)*s_7VII
+    p_7VII7VI = np.linspace(p_7VII,p_7VI,n)
+    h_7VII7VI = np.zeros(n)
+    T_7VII7VI = np.zeros(n)
+    for i in range(n):
+        h_7VII7VI[i] = CP.PropsSI('H','S',s_7VII7VI[i],'P',p_7VII7VI[i],'Water')
+        T_7VII7VI[i] = CP.PropsSI('T','S',s_7VII7VI[i],'P',p_7VII7VI[i],'Water')
+
+    s_7VIII7VII = np.ones(n)*s_7VIII
+    p_7VIII7VII = np.linspace(p_7VIII,p_7VII,n)
+    h_7VIII7VII = np.zeros(n)
+    T_7VIII7VII = np.zeros(n)
+    for i in range(n):
+        h_7VIII7VII[i] = CP.PropsSI('H','S',s_7VIII7VII[i],'P',p_7VIII7VII[i],'Water')
+        T_7VIII7VII[i] = CP.PropsSI('T','S',s_7VIII7VII[i],'P',p_7VIII7VII[i],'Water')
+
+    s_points = np.append(s_12, [s_23,s_34,s_45,s_56,s_67,s_78,s_89,s_97IV,s_7IV9IV,s_9IV9VIII] )#*1e-3
+    h_points = np.append(h_12, [h_23,h_34,h_45,h_56,h_67,h_78,h_89,h_97IV,h_7IV9IV,h_9IV9VIII] )#*1e-3
+    T_points = np.append(T_12, [T_23,T_34,T_45,T_56,T_67,T_78,T_89,T_97IV,T_7IV9IV,T_9IV9VIII] )
+    T_points -= 273.15
+
+    s_bI = np.append(s_6I7I ,s_7I7 )#*1e-
+    s_bII = np.append(s_6II7II,s_7II7I )
+    s_bIII = np.append(s_6III7III,s_7III7II )
+    s_bIV = np.append(s_6IV7IV,s_7IV7III )
+    s_bV = np.append(s_6V7V,s_7V7IV )
+    s_bVI = np.append(s_6VI7VI,s_7VI7V )
+    s_bVII = np.append(s_6VII7VII,s_7VII7VI )
+    s_bVIII = np.append(s_6VIII7VIII,s_7VIII7VII )
+
+    h_bI = np.append(h_6I7I, h_7I7 )#*1e-
+    h_bII = np.append(h_6II7II,h_7II7I )
+    h_bIII = np.append(h_6III7III,h_7III7II )
+    h_bIV = np.append(h_6IV7IV,h_7IV7III )
+    h_bV = np.append(h_6V7V,h_7V7IV )
+    h_bVI = np.append(h_6VI7VI,h_7VI7V )
+    h_bVII = np.append(h_6VII7VII,h_7VII7VI )
+    h_bVIII = np.append(h_6VIII7VIII,h_7VIII7VII )
+
+    T_bI = np.append(T_6I7I, T_7I7 )#*1e-
+    T_bII = np.append(T_6II7II,T_7II7I )
+    T_bIII = np.append(T_6III7III,T_7III7II )
+    T_bIV = np.append(T_6IV7IV,T_7IV7III )
+    T_bV = np.append(T_6V7V,T_7V7IV )
+    T_bVI = np.append(T_6VI7VI,T_7VI7V )
+    T_bVII = np.append(T_6VII7VII,T_7VII7VI )
+    T_bVIII = np.append(T_6VIII7VIII,T_7VIII7VII )
+
+    T_bI -= 273.15
+    T_bII -= 273.15
+    T_bIII -= 273.15
+    T_bIV -= 273.15
+    T_bV -= 273.15
+    T_bVI -= 273.15
+    T_bVII -= 273.15
+    T_bVIII -= 273.15
+
+    # Process output variables - do not modify---------------------------------
+    p = (p_1,p_2,p_3,p_4,p_5,
+    p_6,p_6I,p_6II,p_6III,p_6IV,p_6V,p_6VI,p_6VII,p_6VIII,
+    p_7,p_7I,p_7II,p_7III,p_7IV,p_7V,p_7VI,p_7VII,p_7VIII,
+    p_8,
+    p_9,p_9I,p_9II,p_9III,p_9IV,p_9V,p_9VI,p_9VII,p_9VIII)
+    T = (T_1,T_2,T_3,T_4,T_5,
+    T_6,T_6I,T_6II,T_6III,T_6IV,T_6V,T_6VI,T_6VII,T_6VIII,
+    T_7,T_7I,T_7II,T_7III,T_7IV,T_7V,T_7VI,T_7VII,T_7VIII,
+    T_8,
+    T_9,T_9I,T_9II,T_9III,T_9IV,T_9V,T_9VI,T_9VII,T_9VIII)
+    s = (s_1,s_2,s_3,s_4,s_5,
+    s_6,s_6I,s_6II,s_6III,s_6IV,s_6V,s_6VI,s_6VII,s_6VIII,
+    s_7,s_7I,s_7II,s_7III,s_7IV,s_7V,s_7VI,s_7VII,s_7VIII,
+    s_8,
+    s_9,s_9I,s_9II,s_9III,s_9IV,s_9V,s_9VI,s_9VII,s_9VIII)
+    h = (h_1,h_2,h_3,h_4,h_5,
+    h_6,h_6I,h_6II,h_6III,h_6IV,h_6V,h_6VI,h_6VII,h_6VIII,
+    h_7,h_7I,h_7II,h_7III,h_7IV,h_7V,h_7VI,h_7VII,h_7VIII,
+    h_8,
+    h_9,h_9I,h_9II,h_9III,h_9IV,h_9V,h_9VI,h_9VII,h_9VIII)
+    e = (e_1,e_2,e_3,e_4,e_5,
+    e_6,e_6I,e_6II,e_6III,e_6IV,e_6V,e_6VI,e_6VII,e_6VIII,
+    e_7,e_7I,e_7II,e_7III,e_7IV,e_7V,e_7VI,e_7VII,e_7VIII,
+    e_8,
+    e_9,e_9I,e_9II,e_9III,e_9IV,e_9V,e_9VI,e_9VII,e_9VIII)
+    x = (x_1,x_2,x_3,x_4,x_5,
+    x_6,x_6I,x_6II,x_6III,x_6IV,x_6V,x_6VI,x_6VII,x_6VIII,
+    x_7,x_7I,x_7II,x_7III,x_7IV,x_7V,x_7VI,x_7VII,x_7VIII,
+    x_8,
+    x_9,x_9I,x_9II,x_9III,x_9IV,x_9V,x_9VI,x_9VII,x_9VIII)
+
+    x = np.array(x)
+    x[x==-1] = np.ones(len(x[x==-1]))*np.nan
+    x = tuple(x)
+
     # 1st figure : Energetic balance
     fig_pie_en = plt.figure(1)
     labels = 'Effective Power \n'+ '%.1f'%(P_e*1e-6)+' MW', 'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW', 'Condensor loss \n'+'%.1f'%(loss_cond*1e-6)+' MW', 'Steam generator losses \n'+'%.1f'%(loss_gen*1e-6)+' MW'
@@ -689,6 +981,7 @@ def steam_turbine(P_e,options,display):
     plt.axis('equal')
     plt.title("Primary energy flux " + "%.1f" %(LHV*dot_m_f*1e-6)+ " MW")
 
+
     # 2nd figure : Exergetic balance
     fig_pie_ex = plt.figure(2)
     labels = ['Effective Power \n'+ '%.1f'%(P_e*1e-6)+' MW',    'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW',    'Condenser losses\n'+'%.1f'%(loss_condex*1e-6)+' MW',    'Turbine & pumps \n irreversibilities \n'+'%.1f'%(loss_rotex*1e-6)+' MW', 'Heat transfer irreversibilities \n in the steam generator \n'+'%.1f'%(loss_transex*1e-6)+' MW','Heat transfer irreversibilities \n in the feed-water heaters \n'+'%.1f'%(loss_FWH*1e-6)+' MW',    'Combustion \n irreversibilities \n'+'%.1f'%(loss_combex*1e-6)+' MW','Chimney losses \n'+'%.1f'%(loss_chemex*1e-6)+' MW']
@@ -696,43 +989,56 @@ def steam_turbine(P_e,options,display):
     plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=30)
     plt.axis('equal')
     plt.title("Primary exergy flux " + "%.1f" %(e_c*dot_m_f*1e-6) + " MW")
-    plt.show()
 
-    # Process output variables - do not modify---------------------------------
-    p = (p_1,p_2,p_3,p_4,p_5,
-          p_6,p_6I,p_6II,p_6III,p_6IV,p_6V,p_6VI,p_6VII,p_6VIII,
-          p_7,p_7I,p_7II,p_7III,p_7IV,p_7V,p_7VI,p_7VII,p_7VIII,
-          p_8,
-          p_9,p_9I,p_9II,p_9III,p_9IV,p_9V,p_9VI,p_9VII,p_9VIII)
-    T = (T_1,T_2,T_3,T_4,T_5,
-          T_6,T_6I,T_6II,T_6III,T_6IV,T_6V,T_6VI,T_6VII,T_6VIII,
-          T_7,T_7I,T_7II,T_7III,T_7IV,T_7V,T_7VI,T_7VII,T_7VIII,
-          T_8,
-          T_9,T_9I,T_9II,T_9III,T_9IV,T_9V,T_9VI,T_9VII,T_9VIII)
-    s = (s_1,s_2,s_3,s_4,s_5,
-          s_6,s_6I,s_6II,s_6III,s_6IV,s_6V,s_6VI,s_6VII,s_6VIII,
-          s_7,s_7I,s_7II,s_7III,s_7IV,s_7V,s_7VI,s_7VII,s_7VIII,
-          s_8,
-          s_9,s_9I,s_9II,s_9III,s_9IV,s_9V,s_9VI,s_9VII,s_9VIII)
-    h = (h_1,h_2,h_3,h_4,h_5,
-          h_6,h_6I,h_6II,h_6III,h_6IV,h_6V,h_6VI,h_6VII,h_6VIII,
-          h_7,h_7I,h_7II,h_7III,h_7IV,h_7V,h_7VI,h_7VII,h_7VIII,
-          h_8,
-          h_9,h_9I,h_9II,h_9III,h_9IV,h_9V,h_9VI,h_9VII,h_9VIII)
-    e = (e_1,e_2,e_3,e_4,e_5,
-          e_6,e_6I,e_6II,e_6III,e_6IV,e_6V,e_6VI,e_6VII,e_6VIII,
-          e_7,e_7I,e_7II,e_7III,e_7IV,e_7V,e_7VI,e_7VII,e_7VIII,
-          e_8,
-          e_9,e_9I,e_9II,e_9III,e_9IV,e_9V,e_9VI,e_9VII,e_9VIII)
-    x = (x_1,x_2,x_3,x_4,x_5,
-          x_6,x_6I,x_6II,x_6III,x_6IV,x_6V,x_6VI,x_6VII,x_6VIII,
-          x_7,x_7I,x_7II,x_7III,x_7IV,x_7V,x_7VI,x_7VII,x_7VIII,
-          x_8,
-          x_9,x_9I,x_9II,x_9III,x_9IV,x_9V,x_9VI,x_9VII,x_9VIII)
 
-    x = np.array(x)
-    x[x==-1] = np.ones(len(x[x==-1]))*np.nan
-    x = tuple(x)
+    # 3rd figure: T-s
+    fig_Ts_diagram = plt.figure(3)
+    fig_Ts_diagram = PropertyPlot('water', 'Ts', unit_system='EUR')
+    fig_Ts_diagram.calc_isolines(CoolProp.iQ, num=11)
+    fig_Ts_diagram.set_axis_limits([0., 9, 0, T_max+100-273.15])
+    plt.grid(True)
+    plt.plot(s_points*1e-3, T_points, c="red")
+    plt.plot(s_bI*1e-3, T_bI, c="red")
+    plt.plot(s_bII*1e-3, T_bII, c="red")
+    plt.plot(s_bIII*1e-3, T_bIII, c="red")
+    plt.plot(s_bIV*1e-3, T_bIV, c="red")
+    plt.plot(s_bV*1e-3, T_bV, c="red")
+    plt.plot(s_bVI*1e-3, T_bVI, c="red")
+    plt.plot(s_bVII*1e-3, T_bVII, c="red")
+    plt.plot(s_bVIII*1e-3, T_bVIII, c="red")
+    plt.plot(np.array(s)*1e-3, np.array(T)-273.15, 'ko')
+    plt.title('T-s diagram of the cycle')
+    plt.xlabel("s $[kJ/kg/K]$")
+    plt.ylabel("T $[°C]$")
+
+
+    # 4th figure: h-s
+    fig_hs_diagram = plt.figure(4)
+    fig_hs_diagram = PropertyPlot('water', 'HS', unit_system='EUR')
+    fig_hs_diagram.calc_isolines(CoolProp.iQ, num=11)
+    fig_hs_diagram.set_axis_limits([0., 9, 0, 4000])
+    plt.grid(True)
+    plt.plot(s_points*1e-3, h_points*1e-3, c="red")
+    plt.plot(s_bI*1e-3, h_bI*1e-3, c="red")
+    plt.plot(s_bII*1e-3, h_bII*1e-3, c="red")
+    plt.plot(s_bIII*1e-3, h_bIII*1e-3, c="red")
+    plt.plot(s_bIV*1e-3, h_bIV*1e-3, c="red")
+    plt.plot(s_bV*1e-3, h_bV*1e-3, c="red")
+    plt.plot(s_bVI*1e-3, h_bVI*1e-3, c="red")
+    plt.plot(s_bVII*1e-3, h_bVII*1e-3, c="red")
+    plt.plot(s_bVIII*1e-3, h_bVIII*1e-3, c="red")
+    plt.plot(np.array(s)*1e-3, np.array(h)*1e-3, 'ko')
+    plt.title('h-s diagram of the cycle')
+    plt.xlabel("s $[kJ/kg/K]$")
+    plt.ylabel("h $[kJ/kg]$")
+
+    fig_pie_en.savefig('pie_en_diag.png', dpi=200)
+    fig_pie_ex.savefig('pie_ex_diag.png', dpi=200)
+    fig_Ts_diagram.savefig('Ts_diag.png', dpi=200)
+    fig_hs_diagram.savefig('hs_diag.png', dpi=200)
+
+    if display:
+        plt.show()
 
     DAT = (p,T,h,s,e,x)
     COMBUSTION = (LHV,e_c,excess_air,cp_gas,gas_prop)

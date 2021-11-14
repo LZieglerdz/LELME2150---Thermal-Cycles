@@ -58,25 +58,9 @@ for gr in GROUPS:
         steam_turbine = importlib.import_module(path).steam_turbine
         P_e = 288e+6
         eta_turb = 0.92,0.90
-        comb = 973.15,  1.05,   0.05,  0.8
-        # comb = 973.15,  1.05,   0,  4 #méthane
-        p_3 = 310e+5
-        p_4 = 70e+5
-        p_ref = 1e+5
-        T_ref = 288.15
-        T_max = 838.15
-        T_cond_out = 305.15
-        T_exhaust = 353.15
-        T_pinch_sub = 0
-        T_pinch_ex = 0
-        T_pinch_cond = 0
-        T_drum = 421.85
-        x_6 = 0.88
-        eta_mec = 0.98
-        eta_pump = 0.85
-        options = p_3,p_4,p_ref,T_ref,T_max,T_cond_out,T_exhaust,T_pinch_sub,T_pinch_ex,T_pinch_cond,T_drum,x_6,comb,eta_mec,eta_pump,eta_turb
-        display = False
-
+        comb = 973.15,1.05,0.05,0.8
+        options = 310e+5,70e+5,1e+5,288.15,838.15,305.15,353.15,0,0,0,421.85,0.88,comb,0.98,0.85,eta_turb
+        display = True
         try:
             (ETA,XMASSFLOW,DATEN,DATEX,DAT,MASSFLOW,COMBUSTION,FIG) = steam_turbine(P_e,options,display)
             (LHV,e_c,excess_air,cp_gas,gas_prop) = COMBUSTION
@@ -122,7 +106,6 @@ for gr in GROUPS:
             print('\n Basic ST failed: please correct your code!')
     except:
         print('\n Basic ST failed: please correct your code!')
-
 
     header  = ['States', 't\n°C', 'p\nkPa', 'x\n-', 'h\nkJ/kg', 's\nkJ/kgK', 'e\nkJ/kg']
     data    = [ ['1    ','%.2f'%(T[0]-273.15), '%.1f'%(p[0]*1e-3), '%.2f'%(x[0]), '%.1f'%(h[0]*1e-3), '%.3f'%(s[0]*1e-3), '%.1f'%(e[0]*1e-3)],
