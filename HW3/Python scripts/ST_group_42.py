@@ -2,10 +2,11 @@
 LELME2150 - Thermal cycles
 Homework 3 - Steam turbine
 
-Signature of the final steam turbine function
+Final steam turbine function
 
-@author: Antoine Laterre
-@date: October 21, 2021
+@author: Laurent, Ziegler de Ziegleck aùf Rheingrüb, 03821500
+         Dimitri, Boterberg                        , 10271700
+@date: November 14, 2021
 """
 
 import CoolProp.CoolProp as CP
