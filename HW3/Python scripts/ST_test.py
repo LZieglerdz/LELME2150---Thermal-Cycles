@@ -59,7 +59,7 @@ for gr in GROUPS:
         P_e = 288e+6
         eta_turb = 0.92,0.90
         comb = 973.15,  1.05,   0.05,  0.8
-        comb = 973.15,  1.05,   0,  4 #méthane
+        # comb = 973.15,  1.05,   0,  4 #méthane
         p_3 = 310e+5
         p_4 = 70e+5
         p_ref = 1e+5
@@ -67,9 +67,9 @@ for gr in GROUPS:
         T_max = 838.15
         T_cond_out = 305.15
         T_exhaust = 353.15
-        T_pinch_sub = 1
-        T_pinch_ex = 1
-        T_pinch_cond = 1
+        T_pinch_sub = 0
+        T_pinch_ex = 0
+        T_pinch_cond = 0
         T_drum = 421.85
         x_6 = 0.88
         eta_mec = 0.98
