@@ -80,4 +80,3 @@ for gr in GROUPS:
     #print(tabulate(data, headers=header, tablefmt="pretty"))    #tablefmt="latex_booktabs" for latex export
     with open('states.txt', 'w') as file:
         file.write(tabulate(data, headers=header, tablefmt="pretty"))
-
