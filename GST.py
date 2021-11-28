@@ -323,7 +323,6 @@ def GST(P_eg, P_es, options, display):
     cp_gas, e_c  = CombEx(x, y)                 #[J/kg]: the fuel exergy
     f = e_c/LHV
     
-    
     R_Star = 0
     for i in range(len(comp)):
         R_Star += air_conc[i]*CP.PropsSI('GAS_CONSTANT','T', T_1g,'P', p_1g, comp[i])/Mm[i] # [J/kgK]
