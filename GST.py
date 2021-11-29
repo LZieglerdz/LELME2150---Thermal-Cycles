@@ -157,6 +157,9 @@ def getCpBar(pi, pf, Ti, Tf, mix_comp, mix_conc):
         cp += getCpMix(rangeT[i], rangeP[i], mix_comp, mix_conc) * (Tf-Ti) / (n*rangeT[i] * np.log(Tf/Ti))
     return(cp)
 
+def exergy(h,s):
+        return( (h-h_ref) - T_ref*(s-s_ref) )
+
 
 #
 #===POLYTROPIC TEMPERATURE=====================================================
@@ -292,6 +295,14 @@ def getPolytropicTemp(p_in, p_out, T_in, T_out, R, eta_pi, iter, mix_comp, mix_c
 #       o fig_Ts_diagram: T-s diagram of the GT cycle
 #       o fig_hs_diagram: h-s diagram of the GT cycle
 def GST(P_eg, P_es, options, display):
+    
+    (p_1g,p_2g,p_3g,p_4g,p_1,p_2,p_3,p_4,p_5,p_6,p_7,p_8,p_8p,p_8pp,p_9,p_9p,p_9pp,p_10p,p_10pp) = np.zeros(19)
+    (T_1g,T_2g,T_3g,T_4g,T_1,T_2,T_3,T_4,T_5,T_6,T_7,T_8,T_8p,T_8pp,T_9,T_9p,T_9pp,T_10p,T_10pp) = np.zeros(19)
+    (s_1g,s_2g,s_3g,s_4g,s_1,s_2,s_3,s_4,s_5,s_6,s_7,s_8,s_8p,s_8pp,s_9,s_9p,s_9pp,s_10p,s_10pp) = np.zeros(19)
+    (h_1g,h_2g,h_3g,h_4g,h_1,h_2,h_3,h_4,h_5,h_6,h_7,h_8,h_8p,h_8pp,h_9,h_9p,h_9pp,h_10p,h_10pp) = np.zeros(19)
+    (e_1g,e_2g,e_3g,e_4g,e_1,e_2,e_3,e_4,e_5,e_6,e_7,e_8,e_8p,e_8pp,e_9,e_9p,e_9pp,e_10p,e_10pp) = np.zeros(19)
+    (x_1g,x_2g,x_3g,x_4g,x_1,x_2,x_3,x_4,x_5,x_6,x_7,x_8,x_8p,x_8pp,x_9,x_9p,x_9pp,x_10p,x_10pp) = np.zeros(19)
+    
     # Process input variables (p.167 book)--------------------------------------------------
     T_ref = 288.15;
     p_ref = 1e+5;
@@ -307,6 +318,7 @@ def GST(P_eg, P_es, options, display):
     x = 0; y = 4; # CH4
     
     T_pinch_approach = 50+273.15; # Approach pinch temperature [K]
+    eta_pump = 1;                 # Extraction pump (1->2) efficiency [-]
     p_3 = 11e6;                   # HP inlet pressure [Pa]
     p_5 = 2.8e6;                  # IP inlet pressure [Pa]
     T_5 = 565+273.15;             # IP inlet temperature [K]
@@ -322,6 +334,7 @@ def GST(P_eg, P_es, options, display):
     # cp_gas                                    #[J/kg/K]: the flue gas specific heat capacity at the combustor outlet
     cp_gas, e_c  = CombEx(x, y)                 #[J/kg]: the fuel exergy
     f = e_c/LHV
+    
     
     R_Star = 0
     for i in range(len(comp)):
@@ -398,9 +411,6 @@ def GST(P_eg, P_es, options, display):
     h_ref = CP.PropsSI('H','P',p_ref,'T', T_ref,'Water') #[J/kg]
     s_ref = CP.PropsSI('S','P',p_ref,'T',T_ref,'Water') #[J/kgK]
     e_ref = 0  #[J/kg]
-
-    def exergy(h,s):
-        return( (h-h_ref) - T_ref*(s-s_ref) )
     
     
     # State 3 -> HP inlet:
@@ -411,6 +421,22 @@ def GST(P_eg, P_es, options, display):
     x_3 = CP.PropsSI('Q','P',p_3,'T',T_3,'Water')
     e_3 = exergy(h_3,s_3)
     
+    # State 10' -> Inlet Evap HP (10'->10"->3 isobar):
+    p_10p = p_3
+    x_10p = 0 # Saturated liquid
+    T_10p = CP.PropsSI('T','P',p_10p,'Q',x_10p,'Water') # = T_6 = T_9
+    h_10p = CP.PropsSI('H','P',p_10p,'Q',x_10p,'Water')
+    s_10p = CP.PropsSI('S','P',p_10p,'Q',x_10p,'Water')
+    e_10p = exergy(h_10p,s_10p)
+    
+    # State 10" -> Outlet Evap HP (10'->10"->3 isobar):
+    p_10pp = p_10p
+    x_10pp = 1 # Saturated vapor
+    T_10pp = CP.PropsSI('T','P',p_10pp,'Q',x_10pp,'Water') # = T_6 = T_9
+    h_10pp = CP.PropsSI('H','P',p_10pp,'Q',x_10pp,'Water')
+    s_10pp = CP.PropsSI('S','P',p_10pp,'Q',x_10pp,'Water')
+    e_10pp = exergy(h_10pp,s_10pp)
+    
     # State 5 -> IP inlet:
     p_5 = p_5              
     T_5 = T_5
@@ -418,6 +444,30 @@ def GST(P_eg, P_es, options, display):
     s_5 = CP.PropsSI('S','P',p_5,'T',T_5,'Water')
     x_5 = CP.PropsSI('Q','P',p_5,'T',T_5,'Water')
     e_5 = exergy(h_5,s_5)
+    
+    # State 9' -> Inlet Evap IP (4->5->9->9'->9" isobar):
+    p_9p = p_5
+    x_9p = 0 # Saturated liquid
+    T_9p = CP.PropsSI('T','P',p_9p,'Q',x_9p,'Water')
+    h_9p = CP.PropsSI('H','P',p_9p,'Q',x_9p,'Water')
+    s_9p = CP.PropsSI('S','P',p_9p,'Q',x_9p,'Water')
+    e_9p = exergy(h_9p,s_9p)
+    
+    # State 9" -> Outlet Evap IP (4->5->9->9'->9" isobar):
+    p_9pp = p_9p
+    x_9pp = 1 # Saturated vapor
+    T_9pp = CP.PropsSI('T','P',p_9pp,'Q',x_9pp,'Water') 
+    h_9pp = CP.PropsSI('H','P',p_9pp,'Q',x_9pp,'Water')
+    s_9pp = CP.PropsSI('S','P',p_9pp,'Q',x_9pp,'Water')
+    e_9pp = exergy(h_9pp,s_9pp)
+    
+    # State 9:
+    p_9 = p_5
+    T_9 = ?        # = T_10p = T_10pp = T_6
+    h_9 = CP.PropsSI('H','P',p_9,'T',T_9,'Water')
+    s_9 = CP.PropsSI('S','P',p_9,'T',T_9,'Water')
+    x_9 = CP.PropsSI('Q','P',p_9,'T',T_9,'Water')
+    e_9 = exergy(h_9,s_9)
     
     # State 6 -> LP inlet:
     p_6 = p_6              
@@ -427,6 +477,30 @@ def GST(P_eg, P_es, options, display):
     x_6 = CP.PropsSI('Q','P',p_6,'T',T_6,'Water')
     e_6 = exergy(h_5,s_5)
     
+    # State 8 -> Sup LP (6->8 isobar):
+    p_8 = p_6              
+    T_8 = ?          # = T_9p = T_9pp
+    h_8 = CP.PropsSI('H','P',p_8,'T',T_8,'Water')
+    s_8 = CP.PropsSI('S','P',p_8,'T',T_8,'Water')
+    x_8 = CP.PropsSI('Q','P',p_8,'T',T_8,'Water')
+    e_8 = exergy(h_8,s_8)
+    
+    # State 8' -> Inlet Evap LP (2->8'->8"->8 isobar):
+    p_8p = p_8
+    x_8p = 0 # Saturated liquid
+    T_8p = CP.PropsSI('T','P',p_8p,'Q',x_8p,'Water')
+    h_8p = CP.PropsSI('H','P',p_8p,'Q',x_8p,'Water')
+    s_8p = CP.PropsSI('S','P',p_8p,'Q',x_8p,'Water')
+    e_8p = exergy(h_8p,s_8p)
+    
+    # State 8" -> Outlet Evap LP (2->8'->8"->8 isobar):
+    p_8pp = p_8p
+    x_8pp = 1 # Saturated vapor
+    T_8pp = CP.PropsSI('T','P',p_8pp,'Q',x_8pp,'Water')
+    h_8pp = CP.PropsSI('H','P',p_8pp,'Q',x_8pp,'Water')
+    s_8pp = CP.PropsSI('S','P',p_8pp,'Q',x_8pp,'Water')
+    e_8pp = exergy(h_8pp,s_8pp)
+    
     # State 7 -> LP outlet:
     p_7 = p_7              
     x_7 = x_7
@@ -435,6 +509,32 @@ def GST(P_eg, P_es, options, display):
     T_7 = CP.PropsSI('T','P',p_7,'Q',x_7,'Water')
     e_7 = exergy(h_5,s_5)
     
+    # State 1 -> Inlet pump, Outlet Condenser (7->1 isothermal):
+    T_1 = T_7
+    x_1 = 0 # Saturated liquid
+    p_1 = CP.PropsSI('P','T',T_1,'Q',x_1,'Water')
+    h_1 = CP.PropsSI('H','T',T_1,'Q',x_1,'Water')
+    s_1 = CP.PropsSI('S','T',T_1,'Q',x_1,'Water')
+    e_1 = exergy(h_1,s_1)
+    
+    # State 2 -> Outlet pump (1->2 isothermal), Inlet Eco LP (2->8'->8"->8 isobar):
+    p_2 = p_8pp
+    s_2is = s_1
+    h_2is = CP.PropsSI('H','P',p_2,'S',s_2is,'Water')
+    h_2 = h_1 + (h_2is-h_1)/eta_pump
+    #h_2 = CP.PropsSI('H','P',p_2,'T',T_2,'Water')
+    T_2 = CP.PropsSI('T','P',p_2,'H',h_2,'Water')
+    #T_2 = T_1
+    s_2 = CP.PropsSI('S','P',p_2,'H',h_2,'Water')
+    x_2 = CP.PropsSI('Q','P',p_2,'H',h_2,'Water')
+    e_2 = exergy(h_2,s_2)
+    
+    # State 4 -> HP outlet:
+    p_4 = p_5 # Separator before the reheater
+    
+    # State 6 -> IP outlet = LP inlet:
+    p_6 = p_8 # Separator at the LP inlet
+
     
     
     
@@ -459,4 +559,4 @@ def GST(P_eg, P_es, options, display):
 ## PROBLEMS:
 # T_4g, h_1g, ...
 
-print(GST(225e+6, 140e+6, 0, False)[0])
+print(GST(225e+6, 140e+6, 0, False)[0][1])
