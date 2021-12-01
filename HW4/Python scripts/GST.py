@@ -157,9 +157,6 @@ def getCpBar(pi, pf, Ti, Tf, mix_comp, mix_conc):
         cp += getCpMix(rangeT[i], rangeP[i], mix_comp, mix_conc) * (Tf-Ti) / (n*rangeT[i] * np.log(Tf/Ti))
     return(cp)
 
-def exergy(h,s):
-        return( (h-h_ref) - T_ref*(s-s_ref) )
-
 
 #
 #===POLYTROPIC TEMPERATURE=====================================================
@@ -319,6 +316,8 @@ def GST(P_eg, P_es, options, display):
     
     T_pinch_approach = 50+273.15; # Approach pinch temperature [K]
     eta_pump = 1;                 # Extraction pump (1->2) efficiency [-]
+    eta_is_HP = 0.92;             # HP turbine isentropic efficiency [-]
+    eta_is_LP = 0.90;             # LP turbine isentropic efficiency [-]
     p_3 = 11e6;                   # HP inlet pressure [Pa]
     p_5 = 2.8e6;                  # IP inlet pressure [Pa]
     T_5 = 565+273.15;             # IP inlet temperature [K]
@@ -412,6 +411,9 @@ def GST(P_eg, P_es, options, display):
     s_ref = CP.PropsSI('S','P',p_ref,'T',T_ref,'Water') #[J/kgK]
     e_ref = 0  #[J/kg]
     
+    def exergy(h,s):
+        return( (h-h_ref) - T_ref*(s-s_ref) )
+    
     
     # State 3 -> HP inlet:
     p_3 = p_3
@@ -463,15 +465,15 @@ def GST(P_eg, P_es, options, display):
     
     # State 9:
     p_9 = p_5
-    T_9 = ?        # = T_10p = T_10pp = T_6
+    T_9 = T_10p        # = T_10p = T_10pp = T_6
     h_9 = CP.PropsSI('H','P',p_9,'T',T_9,'Water')
     s_9 = CP.PropsSI('S','P',p_9,'T',T_9,'Water')
     x_9 = CP.PropsSI('Q','P',p_9,'T',T_9,'Water')
     e_9 = exergy(h_9,s_9)
     
     # State 6 -> LP inlet:
-    p_6 = p_6              
-    T_6 = T_6
+    p_6 = p_6  # = p_8             
+    T_6 = T_6  # = T_9 = T_10p = T_10pp
     h_6 = CP.PropsSI('H','P',p_6,'T',T_6,'Water')
     s_6 = CP.PropsSI('S','P',p_6,'T',T_6,'Water')
     x_6 = CP.PropsSI('Q','P',p_6,'T',T_6,'Water')
@@ -479,7 +481,7 @@ def GST(P_eg, P_es, options, display):
     
     # State 8 -> Sup LP (6->8 isobar):
     p_8 = p_6              
-    T_8 = ?          # = T_9p = T_9pp
+    T_8 = T_9p          # = T_9p = T_9pp
     h_8 = CP.PropsSI('H','P',p_8,'T',T_8,'Water')
     s_8 = CP.PropsSI('S','P',p_8,'T',T_8,'Water')
     x_8 = CP.PropsSI('Q','P',p_8,'T',T_8,'Water')
@@ -531,17 +533,17 @@ def GST(P_eg, P_es, options, display):
     
     # State 4 -> HP outlet:
     p_4 = p_5 # Separator before the reheater
+    s_4is = s_3
+    h_4is = CP.PropsSI('H','P',p_4,'S',s_4is,'Water')
+    h_4 = h_3 - eta_is_HP*(h_3-h_4is)
+    s_4 = CP.PropsSI('S','P',p_4,'H',h_4,'Water')
+    T_4 = CP.PropsSI('T','P',p_4,'H',h_4,'Water')
+    x_4 = CP.PropsSI('Q','P',p_4,'H',h_4,'Water')
+    e_4 = exergy(h_4,s_4)
     
-    # State 6 -> IP outlet = LP inlet:
-    p_6 = p_8 # Separator at the LP inlet
+    
+    
 
-    
-    
-    
-
-    
-    
-    
     
     # Process output variables - do not modify---------------------------------
     p = (p_1g,p_2g,p_3g,p_4g,p_1,p_2,p_3,p_4,p_5,p_6,p_7,p_8,p_8p,p_8pp,p_9,p_9p,p_9pp,p_10p,p_10pp)
@@ -559,4 +561,4 @@ def GST(P_eg, P_es, options, display):
 ## PROBLEMS:
 # T_4g, h_1g, ...
 
-print(GST(225e+6, 140e+6, 0, False)[0][1])
+print(GST(225e+6, 140e+6, 0, False)[0][1]-273*np.ones(19))
