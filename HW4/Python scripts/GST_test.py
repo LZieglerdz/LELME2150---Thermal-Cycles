@@ -27,22 +27,23 @@ from tabulate import tabulate
 #
 for gr in GROUPS:
     try:
-        path = 'ST_group_' + gr;
+        path = 'GST_group_' + gr;
         print('\n '+path)
         GST = importlib.import_module(path).GST
         P_eg = 225e+6
         P_es = 140e+6
         comb = 0, 4
-        options = comb, 288.15, 1e+5, 15+273.15, 100e3, 1250+273.15, 15, 0.9, 0.9, 1-0.05, 0.015, 50+273.15, 11e6, 2.8e6, 565+273.15, 0.4e6, 318+273.15, 6e3, 0.95 
+        options = comb, 288.15, 1e+5, 15+273.15, 100e3, 1250+273.15, 15, 0.9, 0.9, 1-0.05, 0.015, 50+273.15, 11e6, 2.8e6, 565+273.15, 0.4e6, 318+273.15, 6e3, 0.95
         display = False
         try:
-            (ETA,XMASSFLOW,DATEN,DATEX,DAT,MASSFLOW,COMBUSTION,FIG) = GST(P_e,options,display)
+            # (ETA,XMASSFLOW,DATEN,DATEX,DAT,MASSFLOW,COMBUSTION,FIG) = GST(P_eg, P_es,options,display)
+            (DAT,COMBUSTION) = GST(P_eg, P_es,options,display)
             (LHV,e_c,excess_air,cp_gas,gas_prop) = COMBUSTION
-            (dotm_a,dotm_f,dotm_g,dotm_v) = MASSFLOW
-            (eta_cyclen,eta_toten,eta_cyclex,eta_totex,eta_rotex,eta_combex) = ETA
-            (loss_mec,loss_gen,loss_cond) = DATEN
-            (loss_mec,loss_rotex,loss_combex,loss_chemex,loss_transex,loss_totex,loss_condex) = DATEX
-            (fig_pie_en,fig_pie_ex,fig_Ts_diagram,fig_hs_diagram, fig_heat_exchange) = FIG
+            # (dotm_a,dotm_f,dotm_g,dotm_v) = MASSFLOW
+            # (eta_cyclen,eta_toten,eta_cyclex,eta_totex,eta_rotex,eta_combex) = ETA
+            # (loss_mec,loss_gen,loss_cond) = DATEN
+            # (loss_mec,loss_rotex,loss_combex,loss_chemex,loss_transex,loss_totex,loss_condex) = DATEX
+            # (fig_pie_en,fig_pie_ex,fig_Ts_diagram,fig_hs_diagram, fig_heat_exchange) = FIG
             (p,T,h,s,e,x) = DAT
             (p_1g,p_2g,p_3g,p_4g,p_1,p_2,p_3,p_4,p_5,p_6,p_7,p_8,p_8p,p_8pp,p_9,p_9p,p_9pp,p_10p,p_10pp) = p
             (T_1g,T_2g,T_3g,T_4g,T_1,T_2,T_3,T_4,T_5,T_6,T_7,T_8,T_8p,T_8pp,T_9,T_9p,T_9pp,T_10p,T_10pp) = T
@@ -50,11 +51,13 @@ for gr in GROUPS:
             (h_1g,h_2g,h_3g,h_4g,h_1,h_2,h_3,h_4,h_5,h_6,h_7,h_8,h_8p,h_8pp,h_9,h_9p,h_9pp,h_10p,h_10pp) = h
             (e_1g,e_2g,e_3g,e_4g,e_1,e_2,e_3,e_4,e_5,e_6,e_7,e_8,e_8p,e_8pp,e_9,e_9p,e_9pp,e_10p,e_10pp) = e
             (x_1g,x_2g,x_3g,x_4g,x_1,x_2,x_3,x_4,x_5,x_6,x_7,x_8,x_8p,x_8pp,x_9,x_9p,x_9pp,x_10p,x_10pp) = x
+
             print('\n Basic ST passed: your code will be graded!')
         except:
             print('\n Basic ST failed: please correct your code!')
     except:
         print('\n Basic ST failed: please correct your code!')
+
 
     header  = ['States', 't\n°C', 'p\nkPa', 'x\n-', 'h\nkJ/kg', 's\nkJ/kgK', 'e\nkJ/kg']
     data    = [ ['1g    ','%.2f'%(T[0]-273.15), '%.1f'%(p[0]*1e-3), '%.2f'%(x[0]), '%.1f'%(h[0]*1e-3), '%.3f'%(s[0]*1e-3), '%.1f'%(e[0]*1e-3)],
@@ -77,6 +80,6 @@ for gr in GROUPS:
                 ['10\' ','%.2f'%(T[17]-273.15), '%.1f'%(p[17]*1e-3), '%.2f'%(x[17]), '%.1f'%(h[17]*1e-3), '%.3f'%(s[17]*1e-3), '%.1f'%(e[17]*1e-3)],
                 ['10\" ','%.2f'%(T[18]-273.15), '%.1f'%(p[18]*1e-3), '%.2f'%(x[18]), '%.1f'%(h[18]*1e-3), '%.3f'%(s[18]*1e-3), '%.1f'%(e[18]*1e-3)]
               ]
-    #print(tabulate(data, headers=header, tablefmt="pretty"))    #tablefmt="latex_booktabs" for latex export
+    # print(tabulate(data, headers=header, tablefmt="pretty"))    #tablefmt="latex_booktabs" for latex export
     with open('states.txt', 'w') as file:
         file.write(tabulate(data, headers=header, tablefmt="pretty"))
