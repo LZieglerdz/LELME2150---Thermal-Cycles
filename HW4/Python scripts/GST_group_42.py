@@ -314,8 +314,8 @@ def GST(P_eg, P_es, options, display):
 
     x = 0; y = 4; # CH4
 
-    T_pinch_approach = 50+273.15; # Approach pinch temperature [K]
-    eta_pump = 1;                 # Extraction pump (1->2) efficiency [-]
+    T_pinch_approach = 50;        # Approach pinch temperature [K]
+    eta_pump = 0.85;              # Extraction pump (1->2) efficiency [-]
     eta_is_HP = 0.92;             # HP turbine isentropic efficiency [-]
     eta_is_LP = 0.90;             # LP turbine isentropic efficiency [-]
     p_3 = 11e6;                   # HP inlet pressure [Pa]
@@ -345,10 +345,10 @@ def GST(P_eg, P_es, options, display):
 
     for i in np.arange(len(comp[:-1])):
         elem = comp[i]
-        print(elem, air_conc[i])
+        #print(elem, air_conc[i])
         Dmolar = CP.PropsSI("Dmolar", "T", 273.15, "P", p_1g, elem)
         CP.set_reference_state(elem, T_ref-15, Dmolar, 0, 0)
-        print(CP.PropsSI("H", "T", T_1g, "P", p_1g, elem))
+        #print(CP.PropsSI("H", "T", T_1g, "P", p_1g, elem))
 
 
 
@@ -570,4 +570,4 @@ def GST(P_eg, P_es, options, display):
 ## PROBLEMS:
 # T_4g, h_1g, ...
 
-print(GST(225e+6, 140e+6, 0, False)[0][1]-273*np.ones(19))
+print(GST(225e+6, 140e+6, 0, False)[0][3]*np.ones(19)*1e-3)
