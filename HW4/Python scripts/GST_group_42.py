@@ -560,12 +560,20 @@ def GST(P_eg, P_es, options, display):
     B = np.array([(h_g_IP-h_g_LP), (h_g_HP-h_g_IP), (h_4g-h_g_HP)])*dotm_g
     X = np.linalg.solve(A, B)
     
+    dotm_vLP = X[0]
+    dotm_vIP = X[1]
+    dotm_vHP = X[2]
+    
     print("m_a = ", dotm_a)
     print("m_g = ", dotm_g)
     print("m_CH4 = ", dotm_f)
     print("m_vLP = ", X[0])
     print("m_vIP = ", X[1])
     print("m_vHP = ", X[2])
+    
+    h_5g = h_4g - (dotm_vLP/dotm_g)*(h_6-h_2) - (dotm_vIP + dotm_vHP)*(h_5-h_2)/dotm_g
+
+    print(h_5g*1e-3)
 
 
 
