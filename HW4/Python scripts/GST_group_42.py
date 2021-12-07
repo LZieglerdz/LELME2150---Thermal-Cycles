@@ -551,6 +551,21 @@ def GST(P_eg, P_es, options, display):
     T_4 = CP.PropsSI('T','P',p_4,'H',h_4,'Water')
     x_4 = CP.PropsSI('Q','P',p_4,'H',h_4,'Water')
     e_4 = exergy(h_4,s_4)
+         
+         
+    h_g_LP = h_8p
+    h_g_IP = h_9p
+    h_g_HP = h_10p
+    A = np.array([[(h_8-h_8p), (h_9p-h_8p), (h_9p-h_8p)], [(h_6-h_8), (h_9-h_9p), (h_10p-h_9p)], [(0), (h_5-h_9), (h_3-h_10p+h_5-h_4)]])
+    B = np.array([(h_g_IP-h_g_LP), (h_g_HP-h_g_IP), (h_4g-h_g_HP)])*dotm_g
+    X = np.linalg.solve(A, B)
+    
+    print("m_a = ", dotm_a)
+    print("m_g = ", dotm_g)
+    print("m_CH4 = ", dotm_f)
+    print("m_vLP = ", X[0])
+    print("m_vIP = ", X[1])
+    print("m_vHP = ", X[2])
 
 
 
