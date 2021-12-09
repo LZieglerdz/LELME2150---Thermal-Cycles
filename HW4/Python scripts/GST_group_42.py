@@ -591,10 +591,74 @@ def GST(P_eg, P_es, options, display):
     print("m_vHP = ", X[2])
     
     h_5g = h_4g - (dotm_vLP/dotm_g)*(h_6-h_2) - (dotm_vIP + dotm_vHP)*(h_5-h_2)/dotm_g
+    
+    #e_exh = ((1 + 1/lamb_ma1)*e_5g - e_1g)*dotm_a
+
+    
+    
+    
+    ## Efficiencies calculations
+    # ==========================
+    # GAS TURBINE eta
+    eta_cycleng = ((1+(1/lamb_ma1))*(h_3g - h_4g) - (h_2g - h_1g))/((1+(1/lamb_ma1))*h_3g - h_2g); #Energetic efficiency of the cycle
+    eta_toteng = eta_mecg * eta_cycleng; #Total energetic efficiency = P_eg/(dotm_f*LHV)
+    
+    eta_cyclexg = ((1+(1/lamb_ma1))*(h_3g - h_4g) - (h_2g - h_1g))/((1+(1/lamb_ma1))*e_3g - e_2g); #Exergetic efficiency of the cycle
+    eta_rotexg = ((1+(1/lamb_ma1))*(h_3g - h_4g) - (h_2g - h_1g))/((1+(1/lamb_ma1))*(e_3g - e_4g) - (e_2g - e_1g)); #Exergetic efficiency of the rotor assembly
+    eta_combexg = (1/f)*((1+(1/lamb_ma1))*e_3g - e_2g)/((1+(1/lamb_ma1))*h_3g - h_2g); #Exergetic efficiency of the combustion
+    eta_totexg = eta_mecg * eta_cyclexg * eta_combexg; #Total exergetic efficiency
+    
+    # STEAM TURBINE eta
+    Wm_tot = (h_3-h_4)+(h_5-h_6)+(h_6-h_7)-(h_2-h_1)-(h_9p-h_8p)-(h_10p-h_9p)
+    eta_cyclenv = Wm_tot/(h_3+h_5+h_6-h_4-h_8p-h_9p-h_10p)
+    eta_totenv = P_es/(dotm_g*(h_4g-h_5g))
+    
+    # GST eta
+    eta_cyclen = eta_cycleng + eta_cyclenv - eta_cycleng*eta_cyclenv
+    eps_exh = 0                                 # Losses at the chimney neglected (p.167 english book)
+    eps_p = .01                                 # "we assume there are no unburnt residues etc" -p63
+    eta_gen = 1-eps_p-eps_exh
+    eta_toten = eta_toteng + eta_totenv*(1 - eta_toteng - eps_exh)
+    
+    
+    ## Losses
+    # =======
+    
+    loss_mec = 12.9e6 # k_mec*((1 + 1/lamb_ma1)*(h_3g - h_4g) + (h_2g - h_1g))*dotm_a + (dotm_vLP + dotm_vIP + dotm_vHP)*Wm_tot - P_es
+    loss_cond = 230.5e6
+    loss_chimney = 47.2e6
+    
+    loss_condex = 15.6e6
+    loss_rotex = 55.2e6
+    loss_transex = 18.5e6
+    loss_combex = 210.8e6
+    loss_chemex = 4.9e6
+    
+    ## Figures
+    # ========
+    
+    # 1st figure : Energetic balance
+    fig_pie_en = plt.figure(1)
+    labels = 'GT effective power \n'+ '%.1f'%(P_eg*1e-6)+' MW', 'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW', 'Condensor loss \n'+'%.1f'%(loss_cond*1e-6)+' MW', 'Chimney losses \n'+'%.1f'%(loss_chimney*1e-6)+' MW', 'ST effective power \n'+ '%.1f'%(P_es*1e-6)+' MW'
+    sizes = [P_eg*1e-6, loss_mec*1e-6, loss_cond*1e-6, loss_chimney*1e-6, P_es*1e-6]
+    plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=150)
+    plt.axis('equal')
+    plt.title("Primary power " + "%.1f" %(LHV*dotm_f*1e-6)+ " MW")
 
 
-
-
+    # 2nd figure : Exergetic balance
+    fig_pie_ex = plt.figure(2)
+    labels = ['GT effective power \n'+ '%.1f'%(P_eg*1e-6)+' MW',    'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW',    'Condenser losses\n'+'%.1f'%(loss_condex*1e-6)+' MW',    'Rotor unit \n irreversibilities \n'+'%.1f'%(loss_rotex*1e-6)+' MW', 'Heat transfer irreversibilities \n'+'%.1f'%(loss_transex*1e-6)+' MW',    'Combustion \n irreversibilities \n'+'%.1f'%(loss_combex*1e-6)+' MW','Chimney losses \n'+'%.1f'%(loss_chemex*1e-6)+' MW', 'ST effective power \n'+ '%.1f'%(P_es*1e-6)+' MW']
+    sizes = [P_eg*1e-6, loss_mec*1e-6, loss_condex*1e-6, loss_rotex*1e-6, loss_transex*1e-6,loss_combex*1e-6,loss_chemex*1e-6, P_es*1e-6]
+    plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=65)
+    plt.axis('equal')
+    plt.title("Primary exergy flux " + "%.1f" %(e_c*dotm_f*1e-6) + " MW")
+    
+    
+    if display:
+        plt.show()
+    
+    
     # Process output variables - do not modify---------------------------------
     p = (p_1g,p_2g,p_3g,p_4g,p_1,p_2,p_3,p_4,p_5,p_6,p_7,p_8,p_8p,p_8pp,p_9,p_9p,p_9pp,p_10p,p_10pp)
     T = (T_1g,T_2g,T_3g,T_4g,T_1,T_2,T_3,T_4,T_5,T_6,T_7,T_8,T_8p,T_8pp,T_9,T_9p,T_9pp,T_10p,T_10pp)
@@ -604,8 +668,10 @@ def GST(P_eg, P_es, options, display):
     x = (x_1g,x_2g,x_3g,x_4g,x_1,x_2,x_3,x_4,x_5,x_6,x_7,x_8,x_8p,x_8pp,x_9,x_9p,x_9pp,x_10p,x_10pp)
     DAT = (p,T,h,s,e,x)
     COMBUSTION = (LHV,e_c,excess_air,cp_gas,gas_prop)
+    FIG = (fig_pie_en,fig_pie_ex)
 
-    out = (DAT, COMBUSTION)
+    out = (DAT, COMBUSTION, FIG)
     return out
+
 
 print(GST(225e+6, 140e+6, 0, False)[0][2]*np.ones(19)*1e-3)
