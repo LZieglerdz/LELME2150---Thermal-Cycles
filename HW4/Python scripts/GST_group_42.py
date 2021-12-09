@@ -315,16 +315,19 @@ def GST(P_eg, P_es, options, display):
     x = 0; y = 4; # CH4
 
     T_pinch_approach = 50;        # Approach pinch temperature [K]
+    T_pinch = 10;
     eta_pump = 0.85;              # Extraction pump (1->2) efficiency [-]
     eta_is_HP = 0.92;             # HP turbine isentropic efficiency [-]
     eta_is_LP = 0.90;             # LP turbine isentropic efficiency [-]
-    p_3 = 11e6;                   # HP inlet pressure [Pa]
-    p_5 = 2.8e6;                  # IP inlet pressure [Pa]
-    T_5 = 565+273.15;             # IP inlet temperature [K]
+    p_3 = 11e6;                   # HP inlet pressure [Pa] (Maximum steam pressure)
+    p_5 = 2.8e6;                  # IP inlet pressure [Pa] (Reaheating pressure)
+    T_5 = 565+273.15;             # IP inlet temperature [K] (Reheating temperature)
     p_6 = 0.4e6;                  # LP inlet pressure [Pa]
     T_6 = 318+273.15;             # LP inlet temperature [K]
     p_7 = 6e3;                    # LP outlet pressure [Pa]
-    x_7 = 0.95;                   # LP outlet steam quality (condenser inlet) [-]
+    x_7 = 0.95;                   # LP outlet steam quality (condenser inlet) = minimum possible vapor quality after final expansion [-]
+    # T_1 = T_cond_out ?
+    # T_pinch_cond ?
 
     #===Ref. State for steam turbine============================================
 
@@ -403,7 +406,7 @@ def GST(P_eg, P_es, options, display):
 
     eta_mecg = 1 - k_mec*((1+(1/lamb_ma1))*(h_3g - h_4g) + (h_2g - h_1g))/((1+(1/lamb_ma1))*(h_3g - h_4g) - (h_2g - h_1g)); #Mechanical efficiency
 
-
+    
     ## Gas cycle Mass flows
     # =====================
 
@@ -551,13 +554,29 @@ def GST(P_eg, P_es, options, display):
     T_4 = CP.PropsSI('T','P',p_4,'H',h_4,'Water')
     x_4 = CP.PropsSI('Q','P',p_4,'H',h_4,'Water')
     e_4 = exergy(h_4,s_4)
-         
-         
-    h_g_LP = h_8p
-    h_g_IP = h_9p
-    h_g_HP = h_10p
-    A = np.array([[(h_8-h_8p), (h_9p-h_8p), (h_9p-h_8p)], [(h_6-h_8), (h_9-h_9p), (h_10p-h_9p)], [(0), (h_5-h_9), (h_3-h_10p+h_5-h_4)]])
-    B = np.array([(h_g_IP-h_g_LP), (h_g_HP-h_g_IP), (h_4g-h_g_HP)])*dotm_g
+    
+    
+    T_g_HP = T_10pp
+    p_g_HP = p_10pp
+    #cp_g_HP = getMeanCp(p_4g,p_g_HP,T_4g,T_g_HP, R_f, comp, flue_conc_mass)
+    #h_g_HP = h_4g + cp_g_HP*(T_g_HP-T_4g)
+    
+    T_g_IP = T_9pp
+    p_g_IP = p_9pp
+    #cp_g_IP = getMeanCp(p_g_HP,p_g_IP,T_g_HP,T_g_IP, R_f, comp, flue_conc_mass)
+    #h_g_IP = h_g_HP + cp_g_IP*(T_g_IP-T_g_HP)
+    
+    T_g_LP = T_8pp
+    p_g_LP = p_8pp
+    #cp_g_LP = getMeanCp(p_g_IP,p_g_LP,T_g_IP,T_g_LP, R_f, comp, flue_conc_mass)
+    #h_g_LP = h_g_IP + cp_g_LP*(T_g_LP-T_g_IP)
+    
+    h_g_HP = CP.PropsSI('H','P',p_g_HP,'T',T_g_HP,'CH4')
+    h_g_IP = CP.PropsSI('H','P',p_g_IP,'T',T_g_IP,'CH4')
+    h_g_LP = CP.PropsSI('H','P',p_g_LP,'T',T_g_LP,'CH4')
+
+    A = np.array([[(h_8-h_8p), (h_9p-h_8p), (h_9p-h_8p)], [(h_6-h_8), (h_9-h_9p), (h_10p-h_9p)], [0, (h_5-h_9), (h_3-h_10p+h_5-h_4)]])
+    B = np.array([(h_g_IP-h_g_LP), (h_g_HP-h_g_IP), abs(h_4g-h_g_HP)])*dotm_g
     X = np.linalg.solve(A, B)
     
     dotm_vLP = X[0]
@@ -573,7 +592,6 @@ def GST(P_eg, P_es, options, display):
     
     h_5g = h_4g - (dotm_vLP/dotm_g)*(h_6-h_2) - (dotm_vIP + dotm_vHP)*(h_5-h_2)/dotm_g
 
-    print(h_5g*1e-3)
 
 
 
@@ -590,7 +608,4 @@ def GST(P_eg, P_es, options, display):
     out = (DAT, COMBUSTION)
     return out
 
-## PROBLEMS:
-# T_4g, h_1g, ...
-
-print(GST(225e+6, 140e+6, 0, False)[0][3]*np.ones(19)*1e-3)
+print(GST(225e+6, 140e+6, 0, False)[0][2]*np.ones(19)*1e-3)
