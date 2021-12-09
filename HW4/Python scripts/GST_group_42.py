@@ -74,7 +74,7 @@ def get_lambda(fuel, z, y, x, T_2, T_3, p_2, p_3,iter, lam_est):
     cp_3S = getMeanCp(p_S, p_3, T_S, T_3, R_f, comp, flue_conc_mass)
     cp_32 = getMeanCp(p_2, p_3, T_2, T_3, R_f, comp, flue_conc_mass)
 
-    lam = (get_LHV(x,y)*1e3-cp_3S*(T_3-T_S))/ (get_ma1(x,y)*cp_32*(T_3-T_2))
+    lam = (get_LHV(x,y)-cp_3S*(T_3-T_S))/ (get_ma1(x,y)*cp_32*(T_3-T_2))
 
     if iter == 0:
         print('The function get_lambda did not converge.')
