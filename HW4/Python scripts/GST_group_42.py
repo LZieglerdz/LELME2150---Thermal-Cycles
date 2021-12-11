@@ -583,6 +583,8 @@ def GST(P_eg, P_es, options, display):
     dotm_vIP = X[1]
     dotm_vHP = X[2]
     
+    dotm_v = dotm_vLP + dotm_vIP + dotm_vHP
+    
     print("m_a = ", dotm_a)
     print("m_g = ", dotm_g)
     print("m_CH4 = ", dotm_f)
@@ -624,15 +626,15 @@ def GST(P_eg, P_es, options, display):
     ## Losses
     # =======
     
-    loss_mec = 12.9e6 # k_mec*((1 + 1/lamb_ma1)*(h_3g - h_4g) + (h_2g - h_1g))*dotm_a + (dotm_vLP + dotm_vIP + dotm_vHP)*Wm_tot - P_es
-    loss_cond = 230.5e6
-    loss_chimney = 47.2e6
+    loss_mec = k_mec*((1 + 1/lamb_ma1)*(h_3g - h_4g) + (h_2g - h_1g))*dotm_a + (dotm_vLP + dotm_vIP + dotm_vHP)*Wm_tot - P_es #12.9e6
+    loss_cond = dotm_v*(h_7 - h_1) #230.5e6
+    loss_chimney = dotm_g*(h_5g - h_4g) #47.2e6
     
-    loss_condex = 15.6e6
+    loss_condex = dotm_v*(e_7 - e_1) #15.6e6
     loss_rotex = 55.2e6
     loss_transex = 18.5e6
-    loss_combex = 210.8e6
-    loss_chemex = 4.9e6
+    loss_combex = dotm_a*(e_2g + e_c/lamb_ma1 - (1 + 1/lamb_ma1)*e_3g) #210.8e6
+    loss_chemex = dotm_g*(e_5g - e_4g) #4.9e6
     
     ## Figures
     # ========
