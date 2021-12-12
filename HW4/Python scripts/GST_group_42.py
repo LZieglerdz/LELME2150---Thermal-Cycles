@@ -315,7 +315,7 @@ def GST(P_eg, P_es, options, display):
     x = 0; y = 4; # CH4
 
     T_pinch_approach = 50;        # Approach pinch temperature [K]
-    T_pinch = 10;
+    T_pinch = 10;                 # Pinch temperature [K]
     eta_pump = 0.85;              # Extraction pump (1->2) efficiency [-]
     eta_is_HP = 0.92;             # HP turbine isentropic efficiency [-]
     eta_is_LP = 0.90;             # LP turbine isentropic efficiency [-]
@@ -348,18 +348,14 @@ def GST(P_eg, P_es, options, display):
 
     for i in np.arange(len(comp[:-1])):
         elem = comp[i]
-        #print(elem, air_conc[i])
         Dmolar = CP.PropsSI("Dmolar", "T", 273.15, "P", p_1g, elem)
         CP.set_reference_state(elem, T_ref-15, Dmolar, 0, 0)
-        #print(CP.PropsSI("H", "T", T_1g, "P", p_1g, elem))
-
 
 
     #===Gas Cycle=============================================================
     ma1 = get_ma1(x,y)
-    LHV = get_LHV(x, y)                         #[J/kg]: the fuel Lower Heating Value
-    # cp_gas                                    #[J/kg/K]: the flue gas specific heat capacity at the combustor outlet
-    cp_gas, e_c  = CombEx(x, y)                 #[J/kg]: the fuel exergy
+    LHV = get_LHV(x, y)                         #[J/kg]: the fuel Lower Heating Value                                  
+    cp_gas, e_c  = CombEx(x, y)                 #[J/kg/K]: the flue gas specific heat capacity at the combustor outlet, [J/kg]: the fuel exergy
     f = e_c/LHV
 
 
@@ -411,8 +407,8 @@ def GST(P_eg, P_es, options, display):
     # =====================
 
     dotm_a = P_eg/(eta_mecg*((1+(1/lamb_ma1))*(h_3g - h_4g) - (h_2g - h_1g))); # Air mass flow rate [kg_air/s]
-    dotm_f = dotm_a/lamb_ma1;                                                 # Combustible mass flow rate [kg_comb/s]
-    dotm_g = (1+(1/lamb_ma1))*dotm_a;                                         # Fluegas mass flow rate [kg_fluegas/s]
+    dotm_f = dotm_a/lamb_ma1;                                                  # Combustible mass flow rate [kg_comb/s]
+    dotm_g = (1+(1/lamb_ma1))*dotm_a;                                          # Fluegas mass flow rate [kg_fluegas/s]
 
     gas_prop = [flue_conc_mass[0]*(1+(1/lamb_ma1))*dotm_a, # N2
                 flue_conc_mass[1]*(1+(1/lamb_ma1))*dotm_a, # O2
@@ -420,8 +416,6 @@ def GST(P_eg, P_es, options, display):
                 flue_conc_mass[3]*(1+(1/lamb_ma1))*dotm_a] # H2O
 
     #===Steam Cycle=============================================================
-
-
 
 
     def exergy(h,s):
@@ -537,9 +531,7 @@ def GST(P_eg, P_es, options, display):
     s_2is = s_1
     h_2is = CP.PropsSI('H','P',p_2,'S',s_2is,'Water')
     h_2 = h_1 + (h_2is-h_1)/eta_pump
-    #h_2 = CP.PropsSI('H','P',p_2,'T',T_2,'Water')
     T_2 = CP.PropsSI('T','P',p_2,'H',h_2,'Water')
-    #T_2 = T_1
     s_2 = CP.PropsSI('S','P',p_2,'H',h_2,'Water')
     x_2 = CP.PropsSI('Q','P',p_2,'H',h_2,'Water')
     e_2 = exergy(h_2,s_2)
@@ -554,7 +546,7 @@ def GST(P_eg, P_es, options, display):
     x_4 = CP.PropsSI('Q','P',p_4,'H',h_4,'Water')
     e_4 = exergy(h_4,s_4)
 
-
+    # State 5g -> Chimney:
     p_5g = p_4g
 
     T_g_HP = T_10p+T_pinch
@@ -568,15 +560,6 @@ def GST(P_eg, P_es, options, display):
     T_g_LP = T_8p+T_pinch
     cp_g_LP = getMeanCp(p_5g,p_5g,T_g_IP,T_g_LP, R_f, comp, flue_conc_mass)
     h_g_LP = h_g_IP + cp_g_LP*(T_g_LP-T_g_IP)
-
-    # h_g_HP = dot_m_f*CP.PropsSI('H','P',p_g_HP,'T',T_g_HP,'CH4')
-    # h_g_IP = dot_m_f*CP.PropsSI('H','P',p_g_IP,'T',T_g_IP,'CH4')
-    # h_g_LP = dot_m_f*CP.PropsSI('H','P',p_g_LP,'T',T_g_LP,'CH4')
-
-    print('h_g_HP:', h_g_HP*1e-3 )
-    print('h_g_IP:', h_g_IP*1e-3 )
-    print('h_g_LP:', h_g_LP*1e-3 )
-
 
     A = np.array([[(h_8-h_8p), (h_9p-h_8p), (h_9p-h_8p)], [(h_6-h_8), (h_9-h_9p), (h_10p-h_9p)], [0, (h_5-h_9), (h_3-h_10p+h_5-h_4)]])
     B = np.array([(h_g_IP-h_g_LP), (h_g_HP-h_g_IP), abs(h_4g-h_g_HP)])*dotm_g
@@ -606,8 +589,6 @@ def GST(P_eg, P_es, options, display):
     e_exh = ((1 + 1/lamb_ma1)*e_5g - e_1g)*dotm_a
 
 
-
-
     ## Efficiencies calculations
     # ==========================
     # GAS TURBINE eta
@@ -635,7 +616,6 @@ def GST(P_eg, P_es, options, display):
     ## Losses
     # =======
 
-
     emT = e_3-e_7
     WmT = h_3-h_7
     emTg = e_3g-e_4g
@@ -653,25 +633,11 @@ def GST(P_eg, P_es, options, display):
     loss_condex = dotm_v*(e_7 - e_1) #15.6e6
     loss_turbex = dotm_v*(emT - WmT) + dotm_g*(emTg - WmTg)
     loss_pumpex = dotm_v*(WmP - emP) + dotm_a*(WmPg - emPg)
-    print(loss_turbex*1e-6, loss_pumpex*1e-6)
     loss_rotex = loss_pumpex + loss_turbex #55.2e6
-    # loss_transex = 18.5e6
-    loss_transex = dotm_g * (e_4g-e_5g) - dotm_vLP*( (e_6-e_2) ) - dotm_vIP*(e_5-e_2) - dotm_vHP*(e_3-e_2)
+    loss_transex = dotm_g * (e_4g-e_5g) - dotm_vLP*( (e_6-e_2) ) - dotm_vIP*(e_5-e_2) - dotm_vHP*(e_3-e_2) #18.5e6
     loss_combex = dotm_a*(e_2g + e_c/lamb_ma1 - (1 + 1/lamb_ma1)*e_3g) #210.8e6
     loss_chemex = dotm_g*e_5g - dotm_a*e_1g #4.9e6
-
-
-    print('loss_mec: %.2f [MW]' %(loss_mec*1e-6) )
-    print('loss_cond: %.2f [MW]' %(loss_cond*1e-6) )
-    print('loss_chimney: %.2f [MW]' %(loss_chimney*1e-6) )
-    print(25*"- ")
-    print('loss_condex: %.2f [MW]' %(loss_condex*1e-6) )
-    print('loss_rotex: %.2f [MW]' %(loss_rotex*1e-6) )
-    print('loss_transex: %.2f [MW]' %(loss_transex*1e-6) )
-    print('loss_combex: %.2f [MW]' %(loss_combex*1e-6) )
-    print('loss_chemex: %.2f [MW]' %(loss_chemex*1e-6) )
-    print(50*"-")
-
+    loss_totex = loss_mec+loss_rotex+loss_combex+loss_chemex+loss_transex+loss_condex
 
 
     ## Figures
@@ -693,7 +659,61 @@ def GST(P_eg, P_es, options, display):
     plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=65)
     plt.axis('equal')
     plt.title("Primary exergy flux " + "%.1f" %(e_c*dotm_f*1e-6) + " MW")
-
+    
+    # 3rd figure : T-s diagram
+    fig_Ts_diagram = plt.figure(3)
+    #fig_Ts_diagram = PropertyPlot('water', 'Ts', unit_system='EUR')
+    #fig_Ts_diagram.calc_isolines(CoolProp.iQ, num=11)
+    #fig_Ts_diagram.set_axis_limits([0., 9, 0, T_max+100-273.15])
+    plt.grid(True)
+    
+    plt.title('T-s diagram of the cycle')
+    plt.xlabel("s $[kJ/kg/K]$")
+    plt.ylabel("t $[°C]$")
+    
+    
+    # 4th figure: h-s diagram
+    fig_hs_diagram = plt.figure(4)
+    #fig_hs_diagram = PropertyPlot('water', 'HS', unit_system='EUR')
+    #fig_hs_diagram.calc_isolines(CoolProp.iQ, num=11)
+    #fig_hs_diagram.set_axis_limits([0., 9, 0, 4000])
+    plt.grid(True)
+    
+    plt.title('h-s diagram of the cycle')
+    plt.xlabel("s $[kJ/kg/K]$")
+    plt.ylabel("h $[kJ/kg]$")
+    
+    # 5th figure: heat exchange diagram
+    Q_4g = 0
+    Q_g = (h_4g-h_5g)*dotm_g/dotm_vHP # /!\ Not right value!
+    Q_3 = 0
+    Q_Eco_LP = (h_8p-h_2)*dotm_v/dotm_vHP
+    Q_Evap_LP = (h_8pp-h_8p)*dotm_vLP/dotm_vHP
+    Q_Eco_IP = (h_9p-h_8p)*(dotm_vHP+dotm_vIP)/dotm_vHP
+    Q_Sup_LP_LT = (h_6-h_8)*dotm_vLP/dotm_vHP
+    Q_Evap_IP = (h_9pp-h_9p)*dotm_vIP/dotm_vHP
+    Q_Sup_LP_HT = (h_8-h_8pp)*dotm_vLP/dotm_vHP
+    Q_Sup_IP = (h_9-h_9pp)*dotm_vIP/dotm_vHP
+    Q_Eco_HP = (h_10p-h_9p)*dotm_vHP/dotm_vHP
+    Q_Evap_HP = (h_10pp-h_10p)*dotm_vHP/dotm_vHP
+    Q_Sup_HP = (h_3-h_10pp)*dotm_vHP/dotm_vHP
+    Q_Reh = (h_5-h_9)*dotm_vIP/dotm_vHP + (h_5-h_4)*dotm_vHP/dotm_vHP
+    
+    fig_heat_exchange = plt.figure(5)
+    plt.grid(True)
+    plt.plot([Q_4g, (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP+Q_Evap_LP+Q_Eco_LP)*1e-3], [T_4g-273.15, T_5g-273.15], 'r')
+    plt.plot([Q_3, (Q_Sup_HP+Q_Reh)*1e-3], [T_3-273.15, T_10pp-273.15], 'b')
+    plt.plot([(Q_Sup_HP+Q_Reh)*1e-3, (Q_Sup_HP+Q_Reh+Q_Evap_HP)*1e-3], [T_10pp-273.15, T_10p-273.15], 'b')
+    plt.plot([(Q_Sup_HP+Q_Reh+Q_Evap_HP)*1e-3, (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP)*1e-3], [T_10p-273.15, T_9pp-273.15], 'b')
+    plt.plot([(Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP)*1e-3, (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP)*1e-3], [T_9pp-273.15, T_9p-273.15], 'b')
+    plt.plot([(Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP)*1e-3, (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP)*1e-3], [T_9p-273.15, T_8pp-273.15], 'b')
+    plt.plot([(Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP)*1e-3, (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP+Q_Evap_LP)*1e-3], [T_8pp-273.15, T_8p-273.15], 'b')
+    plt.plot([(Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP+Q_Evap_LP)*1e-3, (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP+Q_Evap_LP+Q_Eco_LP)*1e-3], [T_8p-273.15, T_2-273.15], 'b')
+    
+    plt.title('Recovery boiler heat exchange')
+    plt.xlabel("Q $[kJ/kg_{vHP}]$")
+    plt.ylabel("t $[°C]$")
+    
 
     if display:
         plt.show()
@@ -708,11 +728,9 @@ def GST(P_eg, P_es, options, display):
     x = (x_1g,x_2g,x_3g,x_4g,x_5g,x_1,x_2,x_3,x_4,x_5,x_6,x_7,x_8,x_8p,x_8pp,x_9,x_9p,x_9pp,x_10p,x_10pp)
     DAT = (p,T,h,s,e,x)
     COMBUSTION = (LHV,e_c,excess_air,cp_gas,gas_prop)
-    FIG = (fig_pie_en,fig_pie_ex)
-
-    out = (DAT, COMBUSTION, FIG)
-    # out = (DAT, COMBUSTION)
+    MASSFLOW = (dotm_a,dotm_f,dotm_g,dotm_v, dotm_vLP, dotm_vIP, dotm_vHP)
+    DATEN = (loss_mec,loss_cond,loss_chimney)
+    DATEX = (loss_mec,loss_rotex,loss_combex,loss_chemex,loss_transex,loss_totex,loss_condex)
+    FIG = (fig_pie_en,fig_pie_ex,fig_Ts_diagram,fig_hs_diagram,fig_heat_exchange)
+    out = (ETA,DATEN,DATEX,DAT,MASSFLOW,COMBUSTION,FIG)
     return out
-
-
-print(GST(225e+6, 140e+6, 0, False)[0][2]*np.ones(20)*1e-3)
