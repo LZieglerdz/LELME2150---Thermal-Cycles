@@ -490,7 +490,7 @@ def GST(P_eg, P_es, options, display):
     h_6 = CP.PropsSI('H','P',p_6,'T',T_6,'Water')
     s_6 = CP.PropsSI('S','P',p_6,'T',T_6,'Water')
     x_6 = CP.PropsSI('Q','P',p_6,'T',T_6,'Water')
-    e_6 = exergy(h_5,s_5)
+    e_6 = exergy(h_6,s_6)
 
     # State 8 -> Sup LP (6->8 isobar):
     p_8 = p_6
@@ -522,7 +522,7 @@ def GST(P_eg, P_es, options, display):
     h_7 = CP.PropsSI('H','P',p_7,'Q',x_7,'Water')
     s_7 = CP.PropsSI('S','P',p_7,'Q',x_7,'Water')
     T_7 = CP.PropsSI('T','P',p_7,'Q',x_7,'Water')
-    e_7 = exergy(h_5,s_5)
+    e_7 = exergy(h_7,s_7)
 
     # State 1 -> Inlet pump, Outlet Condenser (7->1 isothermal):
     T_1 = T_7
@@ -620,7 +620,7 @@ def GST(P_eg, P_es, options, display):
     eta_totexg = eta_mecg * eta_cyclexg * eta_combexg; #Total exergetic efficiency
 
     # STEAM TURBINE eta
-    Wm_tot = (h_3-h_4)+(h_5-h_6)+(h_6-h_7)-(h_2-h_1)-(h_9p-h_8p)-(h_10p-h_9p)
+    Wm_tot = (h_3-h_4)+(h_5-h_6)+(h_6-h_7)-(h_2-h_1)#-(h_9p-h_8p)-(h_10p-h_9p)
     eta_cyclenv = Wm_tot/(h_3+h_5+h_6-h_4-h_8p-h_9p-h_10p)
     eta_totenv = P_es/(dotm_g*(h_4g-h_5g))
 
@@ -635,15 +635,30 @@ def GST(P_eg, P_es, options, display):
     ## Losses
     # =======
 
+
+    emT = e_3-e_7
+    WmT = h_3-h_7
+    emTg = e_3g-e_4g
+    WmTg = h_3g-h_4g
+
+    emP = e_2-e_1
+    WmP = h_2-h_1
+    emPg = e_2g-e_1g
+    WmPg = h_2g-h_1g
+
     loss_mec = k_mec*dotm_a*( (1 + 1/lamb_ma1)*(h_3g - h_4g) + (h_2g - h_1g) ) + (dotm_vLP + dotm_vIP + dotm_vHP)*Wm_tot - P_es #12.9e6
     loss_cond = dotm_v*(h_7 - h_1) #230.5e6
-    loss_chimney = dotm_g*(h_5g) #47.2e6
+    loss_chimney = dotm_g*h_5g - dotm_a*h_1g #47.2e6
 
     loss_condex = dotm_v*(e_7 - e_1) #15.6e6
-    loss_rotex = 55.2e6
-    loss_transex = 18.5e6
+    loss_turbex = dotm_v*(emT - WmT) + dotm_g*(emTg - WmTg)
+    loss_pumpex = dotm_v*(WmP - emP) + dotm_a*(WmPg - emPg)
+    print(loss_turbex*1e-6, loss_pumpex*1e-6)
+    loss_rotex = loss_pumpex + loss_turbex #55.2e6
+    # loss_transex = 18.5e6
+    loss_transex = dotm_g * (e_4g-e_5g) - dotm_vLP*( (e_6-e_2) ) - dotm_vIP*(e_5-e_2) - dotm_vHP*(e_3-e_2)
     loss_combex = dotm_a*(e_2g + e_c/lamb_ma1 - (1 + 1/lamb_ma1)*e_3g) #210.8e6
-    loss_chemex = dotm_g*(e_5g) #4.9e6
+    loss_chemex = dotm_g*e_5g - dotm_a*e_1g #4.9e6
 
 
     print('loss_mec: %.2f [MW]' %(loss_mec*1e-6) )
@@ -662,23 +677,23 @@ def GST(P_eg, P_es, options, display):
     ## Figures
     # ========
 
-    # # 1st figure : Energetic balance
-    # fig_pie_en = plt.figure(1)
-    # labels = 'GT effective power \n'+ '%.1f'%(P_eg*1e-6)+' MW', 'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW', 'Condensor loss \n'+'%.1f'%(loss_cond*1e-6)+' MW', 'Chimney losses \n'+'%.1f'%(loss_chimney*1e-6)+' MW', 'ST effective power \n'+ '%.1f'%(P_es*1e-6)+' MW'
-    # sizes = [P_eg*1e-6, loss_mec*1e-6, loss_cond*1e-6, loss_chimney*1e-6, P_es*1e-6]
-    # plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=150)
-    # plt.axis('equal')
-    # plt.title("Primary power " + "%.1f" %(LHV*dotm_f*1e-6)+ " MW")
-    #
-    #
-    # # 2nd figure : Exergetic balance
-    # fig_pie_ex = plt.figure(2)
-    # labels = ['GT effective power \n'+ '%.1f'%(P_eg*1e-6)+' MW',    'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW',    'Condenser losses\n'+'%.1f'%(loss_condex*1e-6)+' MW',    'Rotor unit \n irreversibilities \n'+'%.1f'%(loss_rotex*1e-6)+' MW', 'Heat transfer irreversibilities \n'+'%.1f'%(loss_transex*1e-6)+' MW',    'Combustion \n irreversibilities \n'+'%.1f'%(loss_combex*1e-6)+' MW','Chimney losses \n'+'%.1f'%(loss_chemex*1e-6)+' MW', 'ST effective power \n'+ '%.1f'%(P_es*1e-6)+' MW']
-    # sizes = [P_eg*1e-6, loss_mec*1e-6, loss_condex*1e-6, loss_rotex*1e-6, loss_transex*1e-6,loss_combex*1e-6,loss_chemex*1e-6, P_es*1e-6]
-    # plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=65)
-    # plt.axis('equal')
-    # plt.title("Primary exergy flux " + "%.1f" %(e_c*dotm_f*1e-6) + " MW")
-    #
+    # 1st figure : Energetic balance
+    fig_pie_en = plt.figure(1)
+    labels = 'GT effective power \n'+ '%.1f'%(P_eg*1e-6)+' MW', 'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW', 'Condensor loss \n'+'%.1f'%(loss_cond*1e-6)+' MW', 'Chimney losses \n'+'%.1f'%(loss_chimney*1e-6)+' MW', 'ST effective power \n'+ '%.1f'%(P_es*1e-6)+' MW'
+    sizes = [P_eg*1e-6, loss_mec*1e-6, loss_cond*1e-6, loss_chimney*1e-6, P_es*1e-6]
+    plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=150)
+    plt.axis('equal')
+    plt.title("Primary power " + "%.1f" %(LHV*dotm_f*1e-6)+ " MW")
+
+
+    # 2nd figure : Exergetic balance
+    fig_pie_ex = plt.figure(2)
+    labels = ['GT effective power \n'+ '%.1f'%(P_eg*1e-6)+' MW',    'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW',    'Condenser losses\n'+'%.1f'%(loss_condex*1e-6)+' MW',    'Rotor unit \n irreversibilities \n'+'%.1f'%(loss_rotex*1e-6)+' MW', 'Heat transfer irreversibilities \n'+'%.1f'%(loss_transex*1e-6)+' MW',    'Combustion \n irreversibilities \n'+'%.1f'%(loss_combex*1e-6)+' MW','Chimney losses \n'+'%.1f'%(loss_chemex*1e-6)+' MW', 'ST effective power \n'+ '%.1f'%(P_es*1e-6)+' MW']
+    sizes = [P_eg*1e-6, loss_mec*1e-6, loss_condex*1e-6, loss_rotex*1e-6, loss_transex*1e-6,loss_combex*1e-6,loss_chemex*1e-6, P_es*1e-6]
+    plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=65)
+    plt.axis('equal')
+    plt.title("Primary exergy flux " + "%.1f" %(e_c*dotm_f*1e-6) + " MW")
+
 
     if display:
         plt.show()
@@ -693,10 +708,10 @@ def GST(P_eg, P_es, options, display):
     x = (x_1g,x_2g,x_3g,x_4g,x_5g,x_1,x_2,x_3,x_4,x_5,x_6,x_7,x_8,x_8p,x_8pp,x_9,x_9p,x_9pp,x_10p,x_10pp)
     DAT = (p,T,h,s,e,x)
     COMBUSTION = (LHV,e_c,excess_air,cp_gas,gas_prop)
-    # FIG = (fig_pie_en,fig_pie_ex)
+    FIG = (fig_pie_en,fig_pie_ex)
 
-    # out = (DAT, COMBUSTION, FIG)
-    out = (DAT, COMBUSTION)
+    out = (DAT, COMBUSTION, FIG)
+    # out = (DAT, COMBUSTION)
     return out
 
 

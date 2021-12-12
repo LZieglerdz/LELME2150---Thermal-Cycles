@@ -34,16 +34,16 @@ for gr in GROUPS:
         P_es = 140e+6
         comb = 0, 4
         options = comb, 288.15, 1e+5, 15+273.15, 100e3, 1250+273.15, 15, 0.9, 0.9, 1-0.05, 0.015, 50+273.15, 11e6, 2.8e6, 565+273.15, 0.4e6, 318+273.15, 6e3, 0.95
-        display = False
+        display = True
         try:
             # (ETA,XMASSFLOW,DATEN,DATEX,DAT,MASSFLOW,COMBUSTION,FIG) = GST(P_eg, P_es,options,display)
-            (DAT,COMBUSTION) = GST(P_eg, P_es,options,display)
+            (DAT,COMBUSTION,FIG) = GST(P_eg, P_es,options,display)
             (LHV,e_c,excess_air,cp_gas,gas_prop) = COMBUSTION
             # (dotm_a,dotm_f,dotm_g,dotm_v) = MASSFLOW
             # (eta_cyclen,eta_toten,eta_cyclex,eta_totex,eta_rotex,eta_combex) = ETA
             # (loss_mec,loss_gen,loss_cond) = DATEN
             # (loss_mec,loss_rotex,loss_combex,loss_chemex,loss_transex,loss_totex,loss_condex) = DATEX
-            # (fig_pie_en,fig_pie_ex,fig_Ts_diagram,fig_hs_diagram, fig_heat_exchange) = FIG
+            (fig_pie_en,fig_pie_ex,fig_Ts_diagram,fig_hs_diagram, fig_heat_exchange) = FIG
             (p,T,h,s,e,x) = DAT
             (p_1g,p_2g,p_3g,p_4g,p_5g,p_1,p_2,p_3,p_4,p_5,p_6,p_7,p_8,p_8p,p_8pp,p_9,p_9p,p_9pp,p_10p,p_10pp) = p
             (T_1g,T_2g,T_3g,T_4g,T_5g,T_1,T_2,T_3,T_4,T_5,T_6,T_7,T_8,T_8p,T_8pp,T_9,T_9p,T_9pp,T_10p,T_10pp) = T
