@@ -33,8 +33,8 @@ p_S = 1e5             # [Pa]
 # air composition
 N2_conc = .7808         # %mol
 O2_conc = .2095         # %mol
-H2O_conc = 0          # %mol
-CO2_conc = .0004          # %mol
+H2O_conc = 0            # %mol
+CO2_conc = .0004        # %mol
 
 Mm_N2 = CP.PropsSI("MOLARMASS", "N2")        # kg/mol
 Mm_O2 = CP.PropsSI("MOLARMASS", "O2")        # kg/mol
@@ -62,13 +62,16 @@ def get_ma1(x, y): #Stoechiometric air-to-fuel ratio [-]
 def get_LHV(x, y): # Lower Heating Value for solid fuels CHyOx
     LHV_mol = (393400 + 102250*y - x*(111000 + 102250*y)/(1 + y/2))*1e3 # [J/kmol]
     LHV = LHV_mol/(12 + y + 16*x) # [J/kg]
+    print('LHV: ',LHV)
     return LHV
 
 def get_lambda(fuel, z, y, x, T_2, T_3, p_2, p_3,iter, lam_est):
     #  Combustion supposée complète
     w = lam_est*(z + (y-2*x)/4)
     a_0 = (x + 2*w - (y/2) - 2*z)/2
-    Mm_f, flue_conc_mol, R_f = FlueGasFrac(x, y, lam_est)
+    Mm_f, flue_conc_mol, R_f = FlueGasFrac(x, y, lam_est, T_3, p_3)
+    # Mm_f, flue_conc_mol = FlueGasFrac(x, y, lam_est)
+
     flue_conc_mass = np.multiply(flue_conc_mol, [Mm_N2, Mm_O2, Mm_CO2, Mm_H2O])/Mm_f
 
     cp_3S = getMeanCp(p_S, p_3, T_S, T_3, R_f, comp, flue_conc_mass)
@@ -106,7 +109,7 @@ def CombEx(x, y): # CHyOx # e_c and Cp of different fuels (from slides of LMECA2
         Cp = 0.86667*1e3
     return [Cp, e_c]
 
-def FlueGasFrac(x, y, lamb):
+def FlueGasFrac(x, y, lamb, T, p):
     w = lamb*(1+0.25*(y-2*x));
     x_O2f = (lamb-1)*(1+0.25*(y-2*x));
     x_N2f = 3.76*w;
@@ -118,9 +121,19 @@ def FlueGasFrac(x, y, lamb):
     x_CO2f = x_CO2f/sum(x_f);
     x_H2Of = x_H2Of/sum(x_f);
     Mm_f = Mm_N2*x_N2f + Mm_O2*x_O2f + Mm_CO2*x_CO2f + Mm_H2O*x_H2Of; # Molar mass of fluegas [g/mol]
-    R_f = janaf.R/Mm_f; # Ideal gas constant (R*) for exhaust gas [J/kg/K]
+
+    # R_f = janaf.R/Mm_f; # Ideal gas constant (R*) for exhaust gas [J/kg/K]
+    R_f = getR( [x_N2f, x_O2f, x_CO2f, x_H2Of], Mm, T, p)
 
     return [Mm_f, [x_N2f, x_O2f, x_CO2f, x_H2Of], R_f]
+    # return [Mm_f, [x_N2f, x_O2f, x_CO2f, x_H2Of]]
+
+def getR(conc_mass,Mm, T, p):
+    R = 0
+    for i in range(len(comp)):
+        R += conc_mass[i]*CP.PropsSI('GAS_CONSTANT','T', T,'P', p, comp[i])/Mm[i] # [J/kgK]
+    return(R)
+
 
 def getCpMix(T, p, mix_comp, mix_conc):
     sum = 0
@@ -354,14 +367,12 @@ def GST(P_eg, P_es, options, display):
 
     #===Gas Cycle=============================================================
     ma1 = get_ma1(x,y)
-    LHV = get_LHV(x, y)                         #[J/kg]: the fuel Lower Heating Value                                  
+    LHV = get_LHV(x, y)                         #[J/kg]: the fuel Lower Heating Value
     cp_gas, e_c  = CombEx(x, y)                 #[J/kg/K]: the flue gas specific heat capacity at the combustor outlet, [J/kg]: the fuel exergy
     f = e_c/LHV
 
 
-    R_Star = 0
-    for i in range(len(comp)):
-        R_Star += air_conc[i]*CP.PropsSI('GAS_CONSTANT','T', T_1g,'P', p_1g, comp[i])/Mm[i] # [J/kgK]
+    R_Star = getR(air_conc,Mm, T_1g, p_1g)
 
     # State 1g
     s_1g = .79*CP.PropsSI('S','T', T_1g,'P', p_1g, "N2") + .21*CP.PropsSI('S','T', T_1g,'P', p_1g, "O2")
@@ -380,22 +391,34 @@ def GST(P_eg, P_es, options, display):
     p_3g = k_cc*p_2g
     lamb = get_lambda('CH4', 1, y, x, T_2g, T_3g, p_2g, p_3g, 200, 1)
     excess_air = lamb
-    print("lambda: %.2f" %lamb)
+    Mm_f, flue_conc_mol, R_f = FlueGasFrac(x, y, lamb, T_3g, p_3g)
 
-    Mm_f, flue_conc_mol, R_f = FlueGasFrac(x, y, lamb)
     flue_conc_mass = np.multiply(flue_conc_mol, [Mm_O2, Mm_N2, Mm_CO2, Mm_H2O])/Mm_f
+
     cp_3g = getMeanCp(p_2g,p_3g,T_2g,T_3g, R_f, comp, flue_conc_mass)
     h_3g = h_2g + cp_3g*(T_3g-T_2g)
+
+    # h_3g = h_2g - flue_conc_mass[-1]*( CP.PropsSI('H','P',p_3g,'Q',1, comp[-1]) - CP.PropsSI('H','P',p_2g,'Q',0, comp[-1]) )
+    # for i in np.arange(len(comp)):
+    #     h_3g += flue_conc_mass[i]*( CP.PropsSI('H','P',p_3g,'T',T_3g, comp[i]) - CP.PropsSI('H','P',p_2g,'T',T_2g, comp[i]) )
+    # print(h_3g*1e-3)
+    cp_3g = (h_3g - h_2g)/(T_3g-T_2g)
     s_3g = s_2g + cp_3g*np.log(T_3g/T_2g) - R_f*np.log(p_3g/p_2g)
     e_3g = (h_3g - h_1g) - T_1g*(s_3g - s_1g)
 
+    print("lambda: %.2f" %lamb)
+    print("Mm_f: %.2f" %Mm_f)
+    print("R_f: %.2f" %R_f)
+    print("flue_conc_mol: ", flue_conc_mol)
+    print("flue_conc_mass: ", flue_conc_mass)
     lamb_ma1 = lamb*ma1;
 
     # State 4g -- 3g->4g: Polytropic Expansion
     p_4g = p_1g
-    T_4g = getPolytropicTemp(p_3g, p_4g, T_3g, T_3g, R_f , 1/eta_pi_t, 100, ['N2','O2','CO2','H2O'], flue_conc_mass)
+    T_4g = getPolytropicTemp(p_3g, p_4g, T_3g, T_3g, R_f , 1/eta_pi_t, 100, comp, flue_conc_mass)
     cp_4g = getMeanCp(p_3g,p_4g,T_4g,T_3g, R_f, comp, flue_conc_mass)
     h_4g = h_3g + cp_4g*(T_4g-T_3g)
+
     s_4g = s_3g + cp_4g*np.log(T_4g/T_3g) - R_f*np.log(p_4g/p_3g)
     e_4g = (h_4g - h_1g) - T_1g*(s_4g - s_1g)
 
@@ -571,13 +594,13 @@ def GST(P_eg, P_es, options, display):
 
     dotm_v = dotm_vLP + dotm_vIP + dotm_vHP
 
-    print("m_a = ", dotm_a)
-    print("m_g = ", dotm_g)
-    print("m_CH4 = ", dotm_f)
-    print("m_vLP = ", dotm_vLP)
-    print("m_vIP = ", dotm_vIP)
-    print("m_vHP = ", dotm_vHP)
-    print(50*'-')
+    # print("m_a = ", dotm_a)
+    # print("m_g = ", dotm_g)
+    # print("m_CH4 = ", dotm_f)
+    # print("m_vLP = ", dotm_vLP)
+    # print("m_vIP = ", dotm_vIP)
+    # print("m_vHP = ", dotm_vHP)
+    # print(50*'-')
 
 
     h_5g = h_4g - (dotm_vLP/dotm_g)*(h_6-h_2) - (dotm_vIP + dotm_vHP)*(h_5-h_2)/dotm_g
@@ -591,6 +614,9 @@ def GST(P_eg, P_es, options, display):
 
     ## Efficiencies calculations
     # ==========================
+    eta_cyclen,eta_toten,eta_cyclex,eta_totex,eta_gen,eta_gex,eta_combex,eta_chimnex,eta_condex,eta_transex,eta_rotex = np.ones(11)*np.nan
+
+
     # GAS TURBINE eta
     eta_cycleng = ((1+(1/lamb_ma1))*(h_3g - h_4g) - (h_2g - h_1g))/((1+(1/lamb_ma1))*h_3g - h_2g); #Energetic efficiency of the cycle
     eta_toteng = eta_mecg * eta_cycleng; #Total energetic efficiency = P_eg/(dotm_f*LHV)
@@ -612,6 +638,7 @@ def GST(P_eg, P_es, options, display):
     eta_gen = 1-eps_p-eps_exh
     eta_toten = eta_toteng + eta_totenv*(1 - eta_toteng - eps_exh)
 
+    ETA = (eta_cyclen,eta_toten,eta_cyclex,eta_totex,eta_gen,eta_gex,eta_combex,eta_chimnex,eta_condex,eta_transex,eta_rotex)
 
     ## Losses
     # =======
@@ -639,7 +666,6 @@ def GST(P_eg, P_es, options, display):
     loss_chemex = dotm_g*e_5g - dotm_a*e_1g #4.9e6
     loss_totex = loss_mec+loss_rotex+loss_combex+loss_chemex+loss_transex+loss_condex
 
-
     ## Figures
     # ========
 
@@ -659,30 +685,30 @@ def GST(P_eg, P_es, options, display):
     plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=65)
     plt.axis('equal')
     plt.title("Primary exergy flux " + "%.1f" %(e_c*dotm_f*1e-6) + " MW")
-    
+
     # 3rd figure : T-s diagram
     fig_Ts_diagram = plt.figure(3)
     #fig_Ts_diagram = PropertyPlot('water', 'Ts', unit_system='EUR')
     #fig_Ts_diagram.calc_isolines(CoolProp.iQ, num=11)
     #fig_Ts_diagram.set_axis_limits([0., 9, 0, T_max+100-273.15])
     plt.grid(True)
-    
+
     plt.title('T-s diagram of the cycle')
     plt.xlabel("s $[kJ/kg/K]$")
     plt.ylabel("t $[°C]$")
-    
-    
+
+
     # 4th figure: h-s diagram
     fig_hs_diagram = plt.figure(4)
     #fig_hs_diagram = PropertyPlot('water', 'HS', unit_system='EUR')
     #fig_hs_diagram.calc_isolines(CoolProp.iQ, num=11)
     #fig_hs_diagram.set_axis_limits([0., 9, 0, 4000])
     plt.grid(True)
-    
+
     plt.title('h-s diagram of the cycle')
     plt.xlabel("s $[kJ/kg/K]$")
     plt.ylabel("h $[kJ/kg]$")
-    
+
     # 5th figure: heat exchange diagram
     Q_4g = 0
     Q_g = (h_4g-h_5g)*dotm_g/dotm_vHP # /!\ Not right value!
@@ -698,22 +724,51 @@ def GST(P_eg, P_es, options, display):
     Q_Evap_HP = (h_10pp-h_10p)*dotm_vHP/dotm_vHP
     Q_Sup_HP = (h_3-h_10pp)*dotm_vHP/dotm_vHP
     Q_Reh = (h_5-h_9)*dotm_vIP/dotm_vHP + (h_5-h_4)*dotm_vHP/dotm_vHP
-    
+
+    Q_5g = (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP+Q_Evap_LP+Q_Eco_LP)*1e-3
+    Q_5 = 0
+    Q_2 = Q_5g
+    Q_4 = (Q_Sup_HP)*1e-3
+    Q_10pp = (Q_Sup_HP+Q_Reh)*1e-3
+    Q_10p = (Q_Sup_HP+Q_Reh+Q_Evap_HP)*1e-3
+    Q_9pp = (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP)*1e-3
+    Q_9p = (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP)*1e-3
+    Q_8pp = (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP)*1e-3
+    Q_8p = (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP+Q_Evap_LP)*1e-3
+
+
     fig_heat_exchange = plt.figure(5)
     plt.grid(True)
-    plt.plot([Q_4g, (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP+Q_Evap_LP+Q_Eco_LP)*1e-3], [T_4g-273.15, T_5g-273.15], 'r')
-    plt.plot([Q_3, (Q_Sup_HP+Q_Reh)*1e-3], [T_3-273.15, T_10pp-273.15], 'b')
-    plt.plot([(Q_Sup_HP+Q_Reh)*1e-3, (Q_Sup_HP+Q_Reh+Q_Evap_HP)*1e-3], [T_10pp-273.15, T_10p-273.15], 'b')
-    plt.plot([(Q_Sup_HP+Q_Reh+Q_Evap_HP)*1e-3, (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP)*1e-3], [T_10p-273.15, T_9pp-273.15], 'b')
-    plt.plot([(Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP)*1e-3, (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP)*1e-3], [T_9pp-273.15, T_9p-273.15], 'b')
-    plt.plot([(Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP)*1e-3, (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP)*1e-3], [T_9p-273.15, T_8pp-273.15], 'b')
-    plt.plot([(Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP)*1e-3, (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP+Q_Evap_LP)*1e-3], [T_8pp-273.15, T_8p-273.15], 'b')
-    plt.plot([(Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP+Q_Evap_LP)*1e-3, (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP+Q_Evap_LP+Q_Eco_LP)*1e-3], [T_8p-273.15, T_2-273.15], 'b')
-    
+    plt.plot([Q_4g, Q_5g], [T_4g-273.15, T_5g-273.15], 'ro-', mec='1.0')
+    plt.plot([Q_3, Q_4], [T_3-273.15, T_4-273.15], 'bo-', mec='1.0')
+    plt.plot([Q_4, Q_10pp], [T_4-273.15, T_10pp-273.15], 'bo-', mec='1.0')
+    plt.plot([Q_10pp, Q_10p], [T_10pp-273.15, T_10p-273.15], 'bo-', mec='1.0')
+    plt.plot([Q_10p, Q_9pp], [T_10p-273.15, T_9pp-273.15], 'bo-', mec='1.0')
+    plt.plot([Q_9pp, Q_9p], [T_9pp-273.15, T_9p-273.15], 'bo-', mec='1.0')
+    plt.plot([Q_9p, Q_8pp], [T_9p-273.15, T_8pp-273.15], 'bo-', mec='1.0')
+    plt.plot([Q_8pp, Q_8p], [T_8pp-273.15, T_8p-273.15], 'bo-', mec='1.0')
+    plt.plot([Q_8p, Q_2], [T_8p-273.15, T_2-273.15], 'bo-', mec='1.0')
+
+    xoffset = 100
+    yoffset = 10
+    plt.annotate('4g',         (Q_4g,T_4g-273.15),      (xoffset, T_4g-273.15+.5*yoffset))
+    plt.annotate('5g',         (Q_5g,T_5g-273.3),       (Q_5g+.5*xoffset,T_5g-273.3+yoffset))
+    plt.annotate('2',          (Q_2,T_2-273.15),        (Q_2+xoffset,T_2-273.15+yoffset))
+    plt.annotate('3\n5',       (Q_3,T_3-273.15),        (Q_3-.5*xoffset,T_3-273.15-7*yoffset))
+    plt.annotate('4',          (Q_4,T_4-273.15),        (Q_4-.5*xoffset,T_4-273.15-4*yoffset))
+    plt.annotate('10\'\'',     (Q_10pp,T_10pp-273.15),  (Q_10pp-xoffset,T_10pp-273.15-4*yoffset))
+    plt.annotate('10\'\n9\n6', (Q_10p,T_10p-273.15),    (Q_10p-1.5*xoffset,T_10p-273.15-9*yoffset))
+    plt.annotate('9\'\'',      (Q_9pp,T_9pp-273.15),    (Q_9pp-xoffset,T_9pp-273.15-4*yoffset))
+    plt.annotate('8\n9\'',     (Q_9p,T_9p-273.15),      (Q_9p-.5*xoffset,T_9p-273.15-7*yoffset))
+    plt.annotate('8\'\'',      (Q_8pp,T_8pp-273.15),    (Q_8pp-xoffset,T_8pp-273.15-4*yoffset))
+    plt.annotate('8\'',        (Q_8p,T_8p-273.15),      (Q_8p-.5*xoffset,T_8p-273.15-4*yoffset))
+
     plt.title('Recovery boiler heat exchange')
     plt.xlabel("Q $[kJ/kg_{vHP}]$")
     plt.ylabel("t $[°C]$")
-    
+    plt.tight_layout()
+    # fig_heat_exchange.savefig('fig_heat_exchange.png', dpi=200)
+
 
     if display:
         plt.show()
@@ -733,4 +788,5 @@ def GST(P_eg, P_es, options, display):
     DATEX = (loss_mec,loss_rotex,loss_combex,loss_chemex,loss_transex,loss_totex,loss_condex)
     FIG = (fig_pie_en,fig_pie_ex,fig_Ts_diagram,fig_hs_diagram,fig_heat_exchange)
     out = (ETA,DATEN,DATEX,DAT,MASSFLOW,COMBUSTION,FIG)
+    # out = (ETA,DATEN,DATEX,DAT,MASSFLOW,COMBUSTION)
     return out
