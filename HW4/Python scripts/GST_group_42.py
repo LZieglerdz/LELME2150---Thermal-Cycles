@@ -824,20 +824,30 @@ def GST(P_eg, P_es, options, display):
     ###########################################################################
     # 1st figure : Energetic balance
     fig_pie_en = plt.figure(1)
+    fig_pie_en.clear()
     labels = 'GT effective power \n'+ '%.1f'%(P_eg*1e-6)+' MW', 'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW', 'Condensor loss \n'+'%.1f'%(loss_cond*1e-6)+' MW', 'Chimney losses \n'+'%.1f'%(loss_chimney*1e-6)+' MW', 'ST effective power \n'+ '%.1f'%(P_es*1e-6)+' MW'
     sizes = [P_eg*1e-6, loss_mec*1e-6, loss_cond*1e-6, loss_chimney*1e-6, P_es*1e-6]
     plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=150)
     plt.axis('equal')
     plt.title("Primary power " + "%.1f" %(LHV*dotm_f*1e-6)+ " MW")
 
+    if savefigure:
+        fig_pie_en.savefig('fig_pie_en.png', dpi=200)
+
+
     ############################################################################
     # 2nd figure : Exergetic balance
     fig_pie_ex = plt.figure(2)
+    fig_pie_ex.clear()
     labels = ['GT effective power \n'+ '%.1f'%(P_eg*1e-6)+' MW',    'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW',    'Condenser losses\n'+'%.1f'%(loss_condex*1e-6)+' MW',    'Rotor unit \n irreversibilities \n'+'%.1f'%(loss_rotex*1e-6)+' MW', 'Heat transfer irreversibilities \n'+'%.1f'%(loss_transex*1e-6)+' MW',    'Combustion \n irreversibilities \n'+'%.1f'%(loss_combex*1e-6)+' MW','Chimney losses \n'+'%.1f'%(loss_chemex*1e-6)+' MW', 'ST effective power \n'+ '%.1f'%(P_es*1e-6)+' MW']
     sizes = [P_eg*1e-6, loss_mec*1e-6, loss_condex*1e-6, loss_rotex*1e-6, loss_transex*1e-6,loss_combex*1e-6,loss_chemex*1e-6, P_es*1e-6]
     plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=65)
     plt.axis('equal')
     plt.title("Primary exergy flux " + "%.1f" %(e_c*dotm_f*1e-6) + " MW")
+
+    if savefigure:
+        fig_pie_ex.savefig('fig_pie_ex.png', dpi=200)
+
 
     ############################################################################
     # 3rd figure : T-s diagram
