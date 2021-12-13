@@ -51,6 +51,8 @@ air_conc = [N2_conc,O2_conc,CO2_conc,H2O_conc]
 Mm   = [Mm_N2,Mm_O2,Mm_CO2,Mm_H2O]
 Mm_air = np.dot(Mm, air_conc)
 
+savefigure = True
+
 def print_red(str):
     print('\033[31m %s \033[0m' %str)
 def print_green(str):
@@ -62,7 +64,6 @@ def get_ma1(x, y): #Stoechiometric air-to-fuel ratio [-]
 def get_LHV(x, y): # Lower Heating Value for solid fuels CHyOx
     LHV_mol = (393400 + 102250*y - x*(111000 + 102250*y)/(1 + y/2))*1e3 # [J/kmol]
     LHV = LHV_mol/(12 + y + 16*x) # [J/kg]
-    print('LHV: ',LHV)
     return LHV
 
 def get_lambda(fuel, z, y, x, T_2, T_3, p_2, p_3,iter, lam_est):
@@ -666,9 +667,161 @@ def GST(P_eg, P_es, options, display):
     loss_chemex = dotm_g*e_5g - dotm_a*e_1g #4.9e6
     loss_totex = loss_mec+loss_rotex+loss_combex+loss_chemex+loss_transex+loss_condex
 
+
+    p = (p_1g,p_2g,p_3g,p_4g,p_5g,p_1,p_2,p_3,p_4,p_5,p_6,p_7,p_8,p_8p,p_8pp,p_9,p_9p,p_9pp,p_10p,p_10pp)
+    T = (T_1g,T_2g,T_3g,T_4g,T_5g,T_1,T_2,T_3,T_4,T_5,T_6,T_7,T_8,T_8p,T_8pp,T_9,T_9p,T_9pp,T_10p,T_10pp)
+    s = (s_1g,s_2g,s_3g,s_4g,s_5g,s_1,s_2,s_3,s_4,s_5,s_6,s_7,s_8,s_8p,s_8pp,s_9,s_9p,s_9pp,s_10p,s_10pp)
+    h = (h_1g,h_2g,h_3g,h_4g,h_5g,h_1,h_2,h_3,h_4,h_5,h_6,h_7,h_8,h_8p,h_8pp,h_9,h_9p,h_9pp,h_10p,h_10pp)
+    e = (e_1g,e_2g,e_3g,e_4g,e_5g,e_1,e_2,e_3,e_4,e_5,e_6,e_7,e_8,e_8p,e_8pp,e_9,e_9p,e_9pp,e_10p,e_10pp)
+    x = (x_1g,x_2g,x_3g,x_4g,x_5g,x_1,x_2,x_3,x_4,x_5,x_6,x_7,x_8,x_8p,x_8pp,x_9,x_9p,x_9pp,x_10p,x_10pp)
+    s_fig = np.array(s)*1e-3
+    h_fig = np.array(h)*1e-3
+    T_fig = T-np.ones(len(T))*273.15
+
     ## Figures
     # ========
 
+    n = 10
+    h_110p = np.linspace(h_1,h_10p,n)
+    s_110p = np.linspace(s_1,s_10p,n)
+    T_110p = np.zeros(n)
+    h_10pp3 = np.linspace(h_10pp,h_3,n)
+    s_10pp3 = np.linspace(s_10pp,s_3,n)
+    T_10pp3 = np.zeros(n)
+    h_9pp5 = np.linspace(h_9pp,h_5,n)
+    s_9pp5 = np.linspace(s_9pp,s_5,n)
+    T_9pp5 = np.zeros(n)
+    h_8pp6 = np.linspace(h_8pp,h_6,n)
+    s_8pp6 = np.linspace(s_8pp,s_6,n)
+    T_8pp6 = np.zeros(n)
+    for i in range(n):
+        s_110p[i] = CP.PropsSI('S','P',p_10p,'H',h_110p[i],'Water')
+        T_110p[i] = CP.PropsSI('T','S',s_110p[i],'H',h_110p[i],'Water')
+        s_10pp3[i] = CP.PropsSI('S','P',p_3,'H',h_10pp3[i],'Water')
+        T_10pp3[i] = CP.PropsSI('T','S',s_10pp3[i],'H',h_10pp3[i],'Water')
+        s_9pp5[i] = CP.PropsSI('S','P',p_5,'H',h_9pp5[i],'Water')
+        T_9pp5[i] = CP.PropsSI('T','S',s_9pp5[i],'H',h_9pp5[i],'Water')
+        s_8pp6[i] = CP.PropsSI('S','P',p_6,'H',h_8pp6[i],'Water')
+        T_8pp6[i] = CP.PropsSI('T','S',s_8pp6[i],'H',h_8pp6[i],'Water')
+
+    n=20
+    p_34 = np.linspace(p_3,p_4,n)
+    s_34 = np.zeros(n)
+    h_34 = np.zeros(n)
+    T_34 = np.zeros(n)
+
+    p_56 = np.linspace(p_5,p_6,n)
+    s_56 = np.zeros(n)
+    h_56 = np.zeros(n)
+    T_56 = np.zeros(n)
+
+    p_67 = np.linspace(p_6,p_7,n)
+    s_67 = np.zeros(n)
+    h_67 = np.zeros(n)
+    T_67 = np.zeros(n)
+    for i in range(n):
+        h_4is = CP.PropsSI('H','P',p_34[i],'S',s_3,'Water')
+        h_34[i] = h_3 + (h_4is-h_3)*eta_is_HP
+        s_34[i] = CP.PropsSI('S','P',p_34[i],'H',h_34[i],'Water')
+        T_34[i] = CP.PropsSI('T','P',p_34[i],'H',h_34[i],'Water')
+
+        h_6is = CP.PropsSI('H','P',p_56[i],'S',s_5,'Water')
+        h_56[i] = h_5 + (h_6is-h_5)*eta_is_LP
+        s_56[i] = CP.PropsSI('S','P',p_56[i],'H',h_56[i],'Water')
+        T_56[i] = CP.PropsSI('T','P',p_56[i],'H',h_56[i],'Water')
+
+        h_7is = CP.PropsSI('H','P',p_67[i],'S',s_6,'Water')
+        h_67[i] = h_6 + (h_7is-h_6)*eta_is_LP
+        s_67[i] = CP.PropsSI('S','P',p_67[i],'H',h_67[i],'Water')
+        T_67[i] = CP.PropsSI('T','P',p_67[i],'H',h_67[i],'Water')
+
+    n = 2
+    p_71 = np.linspace(p_7,p_1,n)
+    x_71 = np.linspace(x_7,x_1,n)
+    T_71 = np.ones(n)*T_7
+    h_71 = np.ones(n)
+    s_71 = np.ones(n)
+
+    p_8p8pp = np.linspace(p_8p,p_8pp,n)
+    x_8p8pp = np.linspace(x_8p,x_8pp,n)
+    T_8p8pp = np.ones(n)*T_8p
+    h_8p8pp = np.ones(n)
+    s_8p8pp = np.ones(n)
+
+    p_9p9pp = np.linspace(p_9p,p_9pp,n)
+    x_9p9pp = np.linspace(x_9p,x_9pp,n)
+    T_9p9pp = np.ones(n)*T_9p
+    h_9p9pp = np.ones(n)
+    s_9p9pp = np.ones(n)
+
+    p_10p10pp = np.linspace(p_10p,p_10pp,n)
+    x_10p10pp = np.linspace(x_10p,x_10pp,n)
+    T_10p10pp = np.ones(n)*T_10p
+    h_10p10pp = np.ones(n)
+    s_10p10pp = np.ones(n)
+    for i in range(n):
+        h_71[i] = CP.PropsSI('H','P',p_71[i],'Q',x_71[i],'Water')
+        s_71[i] = CP.PropsSI('S','P',p_71[i],'Q',x_71[i],'Water')
+
+        h_8p8pp[i] = CP.PropsSI('H','P',p_8p8pp[i],'Q',x_8p8pp[i],'Water')
+        s_8p8pp[i] = CP.PropsSI('S','P',p_8p8pp[i],'Q',x_8p8pp[i],'Water')
+
+        h_9p9pp[i] = CP.PropsSI('H','P',p_9p9pp[i],'Q',x_9p9pp[i],'Water')
+        s_9p9pp[i] = CP.PropsSI('S','P',p_9p9pp[i],'Q',x_9p9pp[i],'Water')
+
+        h_10p10pp[i] = CP.PropsSI('H','P',p_10p10pp[i],'Q',x_10p10pp[i],'Water')
+        s_10p10pp[i] = CP.PropsSI('S','P',p_10p10pp[i],'Q',x_10p10pp[i],'Water')
+
+
+    n = 10
+    p_12g = np.linspace(p_1g,p_2g,n)
+    T_12g = np.ones(n)*T_1g
+    h_12g = np.ones(n)*h_1g
+    s_12g = np.ones(n)*s_1g
+
+    p_23g = np.linspace(p_2g,p_3g,n)
+    T_23g = np.linspace(T_2g,T_3g,n)
+    h_23g = np.ones(n)*h_2g
+    s_23g = np.ones(n)*s_2g
+
+    p_34g = np.linspace(p_3g,p_4g,n)
+    T_34g = np.ones(n)*T_3g
+    h_34g = np.ones(n)*h_3g
+    s_34g = np.ones(n)*s_3g
+
+    p_45g = np.linspace(p_4g,p_5g,n)
+    T_45g = np.linspace(T_4g,T_5g,n)
+    h_45g = np.ones(n)*h_4g
+    s_45g = np.ones(n)*s_4g
+
+    cp_51g = (h_1g-h_5g)/(T_1g-T_5g)
+    p_51g = np.linspace(p_5g,p_1g,n)
+    T_51g = np.linspace(T_5g,T_1g,n)
+    h_51g = np.ones(n)*h_5g
+    s_51g = np.ones(n)*s_5g
+
+
+    for i in np.arange(1,n):
+        T_12g[i] = getPolytropicTemp(p_12g[0], p_12g[i], T_12g[0], T_12g[0], R_Star, eta_pi_c, 100, comp, air_conc)
+        h_12g[i] = h_12g[i-1] + cp_2g*(T_12g[i]-T_12g[i-1])
+        s_12g[i] = s_12g[i-1] + cp_2g*np.log(T_12g[i]/T_12g[i-1]) - R_Star*np.log(p_12g[i]/p_12g[i-1])
+
+        h_23g[i] = h_23g[i-1] + cp_3g*(T_23g[i]-T_23g[i-1])
+        s_23g[i] = s_23g[i-1] + cp_3g*np.log(T_23g[i]/T_23g[i-1]) - R_f*np.log(p_23g[i]/p_23g[i-1])
+
+        T_34g[i] = getPolytropicTemp(p_34g[0], p_34g[i], T_34g[0], T_34g[0], R_f, 1/eta_pi_t, 100, comp, flue_conc_mass)
+        h_34g[i] = h_34g[i-1] + cp_4g*(T_34g[i]-T_34g[i-1])
+        s_34g[i] = s_34g[i-1] + cp_4g*np.log(T_34g[i]/T_34g[i-1]) - R_f*np.log(p_34g[i]/p_34g[i-1])
+
+        h_45g[i] = h_45g[i-1] + cp_5g*(T_45g[i]-T_45g[i-1])
+        s_45g[i] = s_45g[i-1] + cp_5g*np.log(T_45g[i]/T_45g[i-1]) - R_f*np.log(p_45g[i]/p_45g[i-1])
+
+        h_51g[i] = h_51g[i-1] + cp_51g*(T_51g[i]-T_51g[i-1])
+        s_51g[i] = s_51g[i-1] + cp_51g*np.log(T_51g[i]/T_51g[i-1]) - R_f*np.log(p_51g[i]/p_51g[i-1])
+
+
+
+    ###########################################################################
     # 1st figure : Energetic balance
     fig_pie_en = plt.figure(1)
     labels = 'GT effective power \n'+ '%.1f'%(P_eg*1e-6)+' MW', 'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW', 'Condensor loss \n'+'%.1f'%(loss_cond*1e-6)+' MW', 'Chimney losses \n'+'%.1f'%(loss_chimney*1e-6)+' MW', 'ST effective power \n'+ '%.1f'%(P_es*1e-6)+' MW'
@@ -677,7 +830,7 @@ def GST(P_eg, P_es, options, display):
     plt.axis('equal')
     plt.title("Primary power " + "%.1f" %(LHV*dotm_f*1e-6)+ " MW")
 
-
+    ############################################################################
     # 2nd figure : Exergetic balance
     fig_pie_ex = plt.figure(2)
     labels = ['GT effective power \n'+ '%.1f'%(P_eg*1e-6)+' MW',    'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW',    'Condenser losses\n'+'%.1f'%(loss_condex*1e-6)+' MW',    'Rotor unit \n irreversibilities \n'+'%.1f'%(loss_rotex*1e-6)+' MW', 'Heat transfer irreversibilities \n'+'%.1f'%(loss_transex*1e-6)+' MW',    'Combustion \n irreversibilities \n'+'%.1f'%(loss_combex*1e-6)+' MW','Chimney losses \n'+'%.1f'%(loss_chemex*1e-6)+' MW', 'ST effective power \n'+ '%.1f'%(P_es*1e-6)+' MW']
@@ -686,29 +839,83 @@ def GST(P_eg, P_es, options, display):
     plt.axis('equal')
     plt.title("Primary exergy flux " + "%.1f" %(e_c*dotm_f*1e-6) + " MW")
 
+    ############################################################################
     # 3rd figure : T-s diagram
     fig_Ts_diagram = plt.figure(3)
-    #fig_Ts_diagram = PropertyPlot('water', 'Ts', unit_system='EUR')
-    #fig_Ts_diagram.calc_isolines(CoolProp.iQ, num=11)
-    #fig_Ts_diagram.set_axis_limits([0., 9, 0, T_max+100-273.15])
+    fig_Ts_diagram.clear()
+    fig_Ts_diagram = PropertyPlot('water', 'Ts', unit_system='EUR')
+    fig_Ts_diagram.calc_isolines(CoolProp.iQ, num=11)
+    fig_Ts_diagram.set_axis_limits([0., 9, 0, 1200+100])
     plt.grid(True)
+
+    plt.plot(s_110p*1e-3, T_110p-273.15,        'b-', mec='1.0')
+    plt.plot(s_10pp3*1e-3, T_10pp3-273.15,      'b-', mec='1.0')
+    plt.plot(s_9pp5*1e-3, T_9pp5-273.15,        'b-', mec='1.0')
+    plt.plot(s_8pp6*1e-3, T_8pp6-273.15,        'b-', mec='1.0')
+    plt.plot(s_34*1e-3, T_34-273.15,            'b-', mec='1.0')
+    plt.plot(s_56*1e-3, T_56-273.15,            'b-', mec='1.0')
+    plt.plot(s_67*1e-3, T_67-273.15,            'b-', mec='1.0')
+    plt.plot(s_71*1e-3, T_71-273.15,            'b-', mec='1.0')
+    plt.plot(s_8p8pp*1e-3, T_8p8pp-273.15,      'b-', mec='1.0')
+    plt.plot(s_9p9pp*1e-3, T_9p9pp-273.15,      'b-', mec='1.0')
+    plt.plot(s_10p10pp*1e-3, T_10p10pp-273.15,  'b-', mec='1.0')
+
+    plt.plot(s_12g*1e-3, T_12g-273.15, 'r-', mec='1.0')
+    plt.plot(s_23g*1e-3, T_23g-273.15, 'r-', mec='1.0')
+    plt.plot(s_34g*1e-3, T_34g-273.15, 'r-', mec='1.0')
+    plt.plot(s_45g*1e-3, T_45g-273.15, 'r-', mec='1.0')
+
+    plt.plot(s_51g*1e-3, T_51g-273.15, 'r.-', mec='1.0')
+
+
+    plt.plot(s_fig,T_fig, 'ko', mec='1.0')
 
     plt.title('T-s diagram of the cycle')
     plt.xlabel("s $[kJ/kg/K]$")
     plt.ylabel("t $[°C]$")
 
+    if savefigure:
+        fig_Ts_diagram.savefig('fig_Ts_diagram.png', dpi=200)
 
+
+    ############################################################################
     # 4th figure: h-s diagram
     fig_hs_diagram = plt.figure(4)
-    #fig_hs_diagram = PropertyPlot('water', 'HS', unit_system='EUR')
-    #fig_hs_diagram.calc_isolines(CoolProp.iQ, num=11)
-    #fig_hs_diagram.set_axis_limits([0., 9, 0, 4000])
+    fig_hs_diagram.clear()
+    fig_hs_diagram = PropertyPlot('water', 'HS', unit_system='EUR')
+    fig_hs_diagram.calc_isolines(CoolProp.iQ, num=11)
+    fig_hs_diagram.set_axis_limits([0., 9, -100, 4000])
     plt.grid(True)
+
+    plt.plot(s_110p*1e-3, h_110p*1e-3,        'b-', mec='1.0')
+    plt.plot(s_10pp3*1e-3, h_10pp3*1e-3,      'b-', mec='1.0')
+    plt.plot(s_9pp5*1e-3, h_9pp5*1e-3,        'b-', mec='1.0')
+    plt.plot(s_8pp6*1e-3, h_8pp6*1e-3,        'b-', mec='1.0')
+    plt.plot(s_34*1e-3, h_34*1e-3,            'b-', mec='1.0')
+    plt.plot(s_56*1e-3, h_56*1e-3,            'b-', mec='1.0')
+    plt.plot(s_67*1e-3, h_67*1e-3,            'b-', mec='1.0')
+    plt.plot(s_71*1e-3, h_71*1e-3,            'b-', mec='1.0')
+    plt.plot(s_8p8pp*1e-3, h_8p8pp*1e-3,      'b-', mec='1.0')
+    plt.plot(s_9p9pp*1e-3, h_9p9pp*1e-3,      'b-', mec='1.0')
+    plt.plot(s_10p10pp*1e-3, h_10p10pp*1e-3,  'b-', mec='1.0')
+
+    plt.plot(s_12g*1e-3, h_12g*1e-3, 'r-', mec='1.0')
+    plt.plot(s_23g*1e-3, h_23g*1e-3, 'r-', mec='1.0')
+    plt.plot(s_34g*1e-3, h_34g*1e-3, 'r-', mec='1.0')
+    plt.plot(s_45g*1e-3, h_45g*1e-3, 'r-', mec='1.0')
+
+    plt.plot(s_51g*1e-3, h_51g*1e-3, 'r.-', mec='1.0')
+
+    plt.plot(s_fig,h_fig, 'ko', mec='1.0')
 
     plt.title('h-s diagram of the cycle')
     plt.xlabel("s $[kJ/kg/K]$")
     plt.ylabel("h $[kJ/kg]$")
 
+    if savefigure:
+        fig_hs_diagram.savefig('fig_hs_diagram.png', dpi=200)
+
+    ############################################################################
     # 5th figure: heat exchange diagram
     Q_4g = 0
     Q_g = (h_4g-h_5g)*dotm_g/dotm_vHP # /!\ Not right value!
@@ -738,6 +945,7 @@ def GST(P_eg, P_es, options, display):
 
 
     fig_heat_exchange = plt.figure(5)
+    fig_heat_exchange.clear()
     plt.grid(True)
     plt.plot([Q_4g, Q_5g], [T_4g-273.15, T_5g-273.15], 'ro-', mec='1.0')
     plt.plot([Q_3, Q_4], [T_3-273.15, T_4-273.15], 'bo-', mec='1.0')
@@ -767,7 +975,9 @@ def GST(P_eg, P_es, options, display):
     plt.xlabel("Q $[kJ/kg_{vHP}]$")
     plt.ylabel("t $[°C]$")
     plt.tight_layout()
-    # fig_heat_exchange.savefig('fig_heat_exchange.png', dpi=200)
+
+    if savefigure:
+        fig_heat_exchange.savefig('fig_heat_exchange.png', dpi=200)
 
 
     if display:
@@ -775,12 +985,6 @@ def GST(P_eg, P_es, options, display):
 
 
     # Process output variables - do not modify---------------------------------
-    p = (p_1g,p_2g,p_3g,p_4g,p_5g,p_1,p_2,p_3,p_4,p_5,p_6,p_7,p_8,p_8p,p_8pp,p_9,p_9p,p_9pp,p_10p,p_10pp)
-    T = (T_1g,T_2g,T_3g,T_4g,T_5g,T_1,T_2,T_3,T_4,T_5,T_6,T_7,T_8,T_8p,T_8pp,T_9,T_9p,T_9pp,T_10p,T_10pp)
-    s = (s_1g,s_2g,s_3g,s_4g,s_5g,s_1,s_2,s_3,s_4,s_5,s_6,s_7,s_8,s_8p,s_8pp,s_9,s_9p,s_9pp,s_10p,s_10pp)
-    h = (h_1g,h_2g,h_3g,h_4g,h_5g,h_1,h_2,h_3,h_4,h_5,h_6,h_7,h_8,h_8p,h_8pp,h_9,h_9p,h_9pp,h_10p,h_10pp)
-    e = (e_1g,e_2g,e_3g,e_4g,e_5g,e_1,e_2,e_3,e_4,e_5,e_6,e_7,e_8,e_8p,e_8pp,e_9,e_9p,e_9pp,e_10p,e_10pp)
-    x = (x_1g,x_2g,x_3g,x_4g,x_5g,x_1,x_2,x_3,x_4,x_5,x_6,x_7,x_8,x_8p,x_8pp,x_9,x_9p,x_9pp,x_10p,x_10pp)
     DAT = (p,T,h,s,e,x)
     COMBUSTION = (LHV,e_c,excess_air,cp_gas,gas_prop)
     MASSFLOW = (dotm_a,dotm_f,dotm_g,dotm_v, dotm_vLP, dotm_vIP, dotm_vHP)
