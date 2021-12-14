@@ -595,6 +595,11 @@ def GST(P_eg, P_es, options, display):
 
     dotm_v = dotm_vLP + dotm_vIP + dotm_vHP
 
+    Cp_w = CP.PropsSI('C','P',p_ref,'T',T_ref,'Water') # Specific heat capacity of water at (p_ref, T_ref) [J/kg/K]
+    dotm_w = dotm_v*(h_7-h_1)/(Cp_w*(T_1-T_ref)) #[kg/s]: mass flow rate of condensed water
+    e_1w = exergy(CP.PropsSI('H','P',p_ref,'T',T_ref,'Water'),CP.PropsSI('S','P',p_ref,'T',T_ref,'Water'))
+    e_7w = exergy(CP.PropsSI('H','P',p_ref,'T',T_7,'Water'),CP.PropsSI('S','P',p_ref,'T',T_7,'Water'))
+
     # print("m_a = ", dotm_a)
     # print("m_g = ", dotm_g)
     # print("m_CH4 = ", dotm_f)
@@ -606,6 +611,7 @@ def GST(P_eg, P_es, options, display):
 
     h_5g = h_4g - (dotm_vLP/dotm_g)*(h_6-h_2) - (dotm_vIP + dotm_vHP)*(h_5-h_2)/dotm_g
     T_5g = CP.PropsSI('T','P',p_5g,'H',h_5g*gas_prop[3],'Water')
+    # cp_5g = getMeanCp(p_5g,p_5g,T_4g,T_5g, R_f, comp, flue_conc_mass)
     cp_5g = (h_5g-h_4g)/(T_5g-T_4g)
     s_5g = s_4g + cp_5g*np.log(T_5g/T_4g) - R_f*np.log(p_5g/p_4g)
     e_5g = (h_5g - h_1g) - T_1g*(s_5g - s_1g)
@@ -613,36 +619,11 @@ def GST(P_eg, P_es, options, display):
     e_exh = ((1 + 1/lamb_ma1)*e_5g - e_1g)*dotm_a
 
 
-    ## Efficiencies calculations
-    # ==========================
-    eta_cyclen,eta_toten,eta_cyclex,eta_totex,eta_gen,eta_gex,eta_combex,eta_chimnex,eta_condex,eta_transex,eta_rotex = np.ones(11)*np.nan
-
-
-    # GAS TURBINE eta
-    eta_cycleng = ((1+(1/lamb_ma1))*(h_3g - h_4g) - (h_2g - h_1g))/((1+(1/lamb_ma1))*h_3g - h_2g); #Energetic efficiency of the cycle
-    eta_toteng = eta_mecg * eta_cycleng; #Total energetic efficiency = P_eg/(dotm_f*LHV)
-
-    eta_cyclexg = ((1+(1/lamb_ma1))*(h_3g - h_4g) - (h_2g - h_1g))/((1+(1/lamb_ma1))*e_3g - e_2g); #Exergetic efficiency of the cycle
-    eta_rotexg = ((1+(1/lamb_ma1))*(h_3g - h_4g) - (h_2g - h_1g))/((1+(1/lamb_ma1))*(e_3g - e_4g) - (e_2g - e_1g)); #Exergetic efficiency of the rotor assembly
-    eta_combexg = (1/f)*((1+(1/lamb_ma1))*e_3g - e_2g)/((1+(1/lamb_ma1))*h_3g - h_2g); #Exergetic efficiency of the combustion
-    eta_totexg = eta_mecg * eta_cyclexg * eta_combexg; #Total exergetic efficiency
-
-    # STEAM TURBINE eta
-    Wm_tot = (h_3-h_4)+(h_5-h_6)+(h_6-h_7)-(h_2-h_1)#-(h_9p-h_8p)-(h_10p-h_9p)
-    eta_cyclenv = Wm_tot/(h_3+h_5+h_6-h_4-h_8p-h_9p-h_10p)
-    eta_totenv = P_es/(dotm_g*(h_4g-h_5g))
-
-    # GST eta
-    eta_cyclen = eta_cycleng + eta_cyclenv - eta_cycleng*eta_cyclenv
-    eps_exh = 0                                 # Losses at the chimney neglected (p.167 english book)
-    eps_p = .01                                 # "we assume there are no unburnt residues etc" -p63
-    eta_gen = 1-eps_p-eps_exh
-    eta_toten = eta_toteng + eta_totenv*(1 - eta_toteng - eps_exh)
-
-    ETA = (eta_cyclen,eta_toten,eta_cyclex,eta_totex,eta_gen,eta_gex,eta_combex,eta_chimnex,eta_condex,eta_transex,eta_rotex)
 
     ## Losses
     # =======
+
+    Wm_tot = (h_3-h_4)+(h_5-h_6)+(h_6-h_7)-(h_2-h_1)#-(h_9p-h_8p)-(h_10p-h_9p)
 
     emT = e_3-e_7
     WmT = h_3-h_7
@@ -666,6 +647,47 @@ def GST(P_eg, P_es, options, display):
     loss_combex = dotm_a*(e_2g + e_c/lamb_ma1 - (1 + 1/lamb_ma1)*e_3g) #210.8e6
     loss_chemex = dotm_g*e_5g - dotm_a*e_1g #4.9e6
     loss_totex = loss_mec+loss_rotex+loss_combex+loss_chemex+loss_transex+loss_condex
+
+    ## Efficiencies calculations
+    # ==========================
+    eta_cyclen,eta_toten,eta_cyclex,eta_totex,eta_gen,eta_gex,eta_combex,eta_chimnex,eta_condex,eta_transex,eta_rotex = np.ones(11)*np.nan
+
+
+    # GAS TURBINE eta
+    eta_cycleng = ((1+(1/lamb_ma1))*(h_3g - h_4g) - (h_2g - h_1g))/((1+(1/lamb_ma1))*h_3g - h_2g); #Energetic efficiency of the cycle
+    eta_toteng = eta_mecg * eta_cycleng; #Total energetic efficiency = P_eg/(dotm_f*LHV)
+
+    eta_cyclexg = ((1+(1/lamb_ma1))*(h_3g - h_4g) - (h_2g - h_1g))/((1+(1/lamb_ma1))*e_3g - e_2g); #Exergetic efficiency of the cycle
+    eta_rotexg = ((1+(1/lamb_ma1))*(h_3g - h_4g) - (h_2g - h_1g))/((1+(1/lamb_ma1))*(e_3g - e_4g) - (e_2g - e_1g)); #Exergetic efficiency of the rotor assembly
+    eta_combexg = (1/f)*((1+(1/lamb_ma1))*e_3g - e_2g)/((1+(1/lamb_ma1))*h_3g - h_2g); #Exergetic efficiency of the combustion
+    eta_totexg = eta_mecg * eta_cyclexg * eta_combexg; #Total exergetic efficiency
+
+
+    # STEAM TURBINE eta
+
+    eta_cyclenv = Wm_tot/(h_3+h_5+h_6-h_4-h_8p-h_9p-h_10p)
+    eta_totenv = P_es/(dotm_g*(h_4g-h_5g))
+    eta_cyclexv = Wm_tot/(e_3+e_5+e_6-e_4-e_8p-e_9p-e_10p)
+    eta_totexv = P_es/ (dotm_f*e_c)
+
+
+    # GST eta
+    eta_cyclen = eta_cycleng + eta_cyclenv - eta_cycleng*eta_cyclenv
+    eps_exh = 0                                 # Losses at the chimney neglected (p.167 english book)
+    eps_p = .01                                 # "we assume there are no unburnt residues etc" -p63
+    eta_gen = 1-eps_p-eps_exh
+    eta_toten = eta_toteng + eta_totenv*(1 - eta_toteng - eps_exh)
+    eta_cyclex = eta_cyclexg + eta_cyclexv - eta_cyclexg*eta_cyclexv
+    eta_totex = eta_totexg + eta_totexv*(1 - eta_totexg - eps_exh)
+    eta_combex = eta_combexg
+    eta_gex = (dotm_vLP*( (e_6-e_2) ) + dotm_vIP*(e_5-e_2) + dotm_vHP*(e_3-e_2)) / (dotm_f*e_c)
+    eta_transex = (dotm_vLP*( (e_6-e_2) ) + dotm_vIP*(e_5-e_2) + dotm_vHP*(e_3-e_2)) / (dotm_g * (e_4g-e_5g))
+    eta_chimnex = eta_gex / (eta_transex * eta_combex)
+    eta_condex = dotm_w*(e_1w-e_7w)/(dotm_v*(e_1-e_7))  #[-]: condenser exergy efficiency                           .
+    eta_rotex =  Wm_tot/(emTg + emT -emP - emPg)                #[-]: pumps and turbines exergy efficiency  .918
+
+    ETA = (eta_cyclen,eta_toten,eta_cyclex,eta_totex,eta_gen,eta_gex,eta_combex,eta_chimnex,eta_condex,eta_transex,eta_rotex)
+
 
 
     p = (p_1g,p_2g,p_3g,p_4g,p_5g,p_1,p_2,p_3,p_4,p_5,p_6,p_7,p_8,p_8p,p_8pp,p_9,p_9p,p_9pp,p_10p,p_10pp)
@@ -824,7 +846,7 @@ def GST(P_eg, P_es, options, display):
     ###########################################################################
     # 1st figure : Energetic balance
     fig_pie_en = plt.figure(1)
-    fig_pie_en.clear()
+    # fig_pie_en.clear()
     labels = 'GT effective power \n'+ '%.1f'%(P_eg*1e-6)+' MW', 'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW', 'Condensor loss \n'+'%.1f'%(loss_cond*1e-6)+' MW', 'Chimney losses \n'+'%.1f'%(loss_chimney*1e-6)+' MW', 'ST effective power \n'+ '%.1f'%(P_es*1e-6)+' MW'
     sizes = [P_eg*1e-6, loss_mec*1e-6, loss_cond*1e-6, loss_chimney*1e-6, P_es*1e-6]
     plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=150)
@@ -838,7 +860,7 @@ def GST(P_eg, P_es, options, display):
     ############################################################################
     # 2nd figure : Exergetic balance
     fig_pie_ex = plt.figure(2)
-    fig_pie_ex.clear()
+    # fig_pie_ex.clear()
     labels = ['GT effective power \n'+ '%.1f'%(P_eg*1e-6)+' MW',    'Mechanical losses \n'+'%.1f'%(loss_mec*1e-6)+' MW',    'Condenser losses\n'+'%.1f'%(loss_condex*1e-6)+' MW',    'Rotor unit \n irreversibilities \n'+'%.1f'%(loss_rotex*1e-6)+' MW', 'Heat transfer irreversibilities \n'+'%.1f'%(loss_transex*1e-6)+' MW',    'Combustion \n irreversibilities \n'+'%.1f'%(loss_combex*1e-6)+' MW','Chimney losses \n'+'%.1f'%(loss_chemex*1e-6)+' MW', 'ST effective power \n'+ '%.1f'%(P_es*1e-6)+' MW']
     sizes = [P_eg*1e-6, loss_mec*1e-6, loss_condex*1e-6, loss_rotex*1e-6, loss_transex*1e-6,loss_combex*1e-6,loss_chemex*1e-6, P_es*1e-6]
     plt.pie(sizes, labels=labels, autopct='%1.1f%%', shadow=True, startangle=65)
@@ -848,11 +870,74 @@ def GST(P_eg, P_es, options, display):
     if savefigure:
         fig_pie_ex.savefig('fig_pie_ex.png', dpi=200)
 
+    ############################################################################
+    # 5th figure: heat exchange diagram
+    Q_4g = 0
+    Q_g = (h_4g-h_5g)*dotm_g/dotm_vHP # /!\ Not right value!
+    Q_3 = 0
+    Q_Eco_LP = (h_8p-h_2)*dotm_v/dotm_vHP
+    Q_Evap_LP = (h_8pp-h_8p)*dotm_vLP/dotm_vHP
+    Q_Eco_IP = (h_9p-h_8p)*(dotm_vHP+dotm_vIP)/dotm_vHP
+    Q_Sup_LP_LT = (h_6-h_8)*dotm_vLP/dotm_vHP
+    Q_Evap_IP = (h_9pp-h_9p)*dotm_vIP/dotm_vHP
+    Q_Sup_LP_HT = (h_8-h_8pp)*dotm_vLP/dotm_vHP
+    Q_Sup_IP = (h_9-h_9pp)*dotm_vIP/dotm_vHP
+    Q_Eco_HP = (h_10p-h_9p)*dotm_vHP/dotm_vHP
+    Q_Evap_HP = (h_10pp-h_10p)*dotm_vHP/dotm_vHP
+    Q_Sup_HP = (h_3-h_10pp)*dotm_vHP/dotm_vHP
+    Q_Reh = (h_5-h_9)*dotm_vIP/dotm_vHP + (h_5-h_4)*dotm_vHP/dotm_vHP
+
+    Q_5g = (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP+Q_Evap_LP+Q_Eco_LP)*1e-3
+    Q_5 = 0
+    Q_2 = Q_5g
+    Q_4 = (Q_Sup_HP)*1e-3
+    Q_10pp = (Q_Sup_HP+Q_Reh)*1e-3
+    Q_10p = (Q_Sup_HP+Q_Reh+Q_Evap_HP)*1e-3
+    Q_9pp = (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP)*1e-3
+    Q_9p = (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP)*1e-3
+    Q_8pp = (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP)*1e-3
+    Q_8p = (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP+Q_Evap_LP)*1e-3
+
+
+    fig_heat_exchange = plt.figure(5)
+    # fig_heat_exchange.clear()
+    plt.grid(True)
+    plt.plot([Q_4g, Q_5g], [T_4g-273.15, T_5g-273.15], 'ro-', mec='1.0')
+    plt.plot([Q_3, Q_4], [T_3-273.15, T_4-273.15], 'bo-', mec='1.0')
+    plt.plot([Q_4, Q_10pp], [T_4-273.15, T_10pp-273.15], 'bo-', mec='1.0')
+    plt.plot([Q_10pp, Q_10p], [T_10pp-273.15, T_10p-273.15], 'bo-', mec='1.0')
+    plt.plot([Q_10p, Q_9pp], [T_10p-273.15, T_9pp-273.15], 'bo-', mec='1.0')
+    plt.plot([Q_9pp, Q_9p], [T_9pp-273.15, T_9p-273.15], 'bo-', mec='1.0')
+    plt.plot([Q_9p, Q_8pp], [T_9p-273.15, T_8pp-273.15], 'bo-', mec='1.0')
+    plt.plot([Q_8pp, Q_8p], [T_8pp-273.15, T_8p-273.15], 'bo-', mec='1.0')
+    plt.plot([Q_8p, Q_2], [T_8p-273.15, T_2-273.15], 'bo-', mec='1.0')
+
+    xoffset = 100
+    yoffset = 10
+    plt.annotate('4g',         (Q_4g,T_4g-273.15),      (xoffset, T_4g-273.15+.5*yoffset))
+    plt.annotate('5g',         (Q_5g,T_5g-273.3),       (Q_5g+.5*xoffset,T_5g-273.3+yoffset))
+    plt.annotate('2',          (Q_2,T_2-273.15),        (Q_2+xoffset,T_2-273.15+yoffset))
+    plt.annotate('3\n5',       (Q_3,T_3-273.15),        (Q_3-.5*xoffset,T_3-273.15-7*yoffset))
+    plt.annotate('4',          (Q_4,T_4-273.15),        (Q_4-.5*xoffset,T_4-273.15-4*yoffset))
+    plt.annotate('10\'\'',     (Q_10pp,T_10pp-273.15),  (Q_10pp-xoffset,T_10pp-273.15-4*yoffset))
+    plt.annotate('10\'\n9\n6', (Q_10p,T_10p-273.15),    (Q_10p-1.5*xoffset,T_10p-273.15-9*yoffset))
+    plt.annotate('9\'\'',      (Q_9pp,T_9pp-273.15),    (Q_9pp-xoffset,T_9pp-273.15-4*yoffset))
+    plt.annotate('8\n9\'',     (Q_9p,T_9p-273.15),      (Q_9p-.5*xoffset,T_9p-273.15-7*yoffset))
+    plt.annotate('8\'\'',      (Q_8pp,T_8pp-273.15),    (Q_8pp-xoffset,T_8pp-273.15-4*yoffset))
+    plt.annotate('8\'',        (Q_8p,T_8p-273.15),      (Q_8p-.5*xoffset,T_8p-273.15-4*yoffset))
+
+    plt.title('Recovery boiler heat exchange')
+    plt.xlabel("Q $[kJ/kg_{vHP}]$")
+    plt.ylabel("t $[°C]$")
+    plt.tight_layout()
+
+    if savefigure:
+        fig_heat_exchange.savefig('fig_heat_exchange.png', dpi=200)
 
     ############################################################################
     # 3rd figure : T-s diagram
     fig_Ts_diagram = plt.figure(3)
-    fig_Ts_diagram.clear()
+    # fig_Ts_diagram.clear()
     fig_Ts_diagram = PropertyPlot('water', 'Ts', unit_system='EUR')
     fig_Ts_diagram.calc_isolines(CoolProp.iQ, num=11)
     fig_Ts_diagram.set_axis_limits([0., 9, 0, 1200+100])
@@ -891,7 +976,7 @@ def GST(P_eg, P_es, options, display):
     ############################################################################
     # 4th figure: h-s diagram
     fig_hs_diagram = plt.figure(4)
-    fig_hs_diagram.clear()
+    # fig_hs_diagram.clear()
     fig_hs_diagram = PropertyPlot('water', 'HS', unit_system='EUR')
     fig_hs_diagram.calc_isolines(CoolProp.iQ, num=11)
     fig_hs_diagram.set_axis_limits([0., 9, -100, 4000])
@@ -925,69 +1010,7 @@ def GST(P_eg, P_es, options, display):
     if savefigure:
         fig_hs_diagram.savefig('fig_hs_diagram.png', dpi=200)
 
-    ############################################################################
-    # 5th figure: heat exchange diagram
-    Q_4g = 0
-    Q_g = (h_4g-h_5g)*dotm_g/dotm_vHP # /!\ Not right value!
-    Q_3 = 0
-    Q_Eco_LP = (h_8p-h_2)*dotm_v/dotm_vHP
-    Q_Evap_LP = (h_8pp-h_8p)*dotm_vLP/dotm_vHP
-    Q_Eco_IP = (h_9p-h_8p)*(dotm_vHP+dotm_vIP)/dotm_vHP
-    Q_Sup_LP_LT = (h_6-h_8)*dotm_vLP/dotm_vHP
-    Q_Evap_IP = (h_9pp-h_9p)*dotm_vIP/dotm_vHP
-    Q_Sup_LP_HT = (h_8-h_8pp)*dotm_vLP/dotm_vHP
-    Q_Sup_IP = (h_9-h_9pp)*dotm_vIP/dotm_vHP
-    Q_Eco_HP = (h_10p-h_9p)*dotm_vHP/dotm_vHP
-    Q_Evap_HP = (h_10pp-h_10p)*dotm_vHP/dotm_vHP
-    Q_Sup_HP = (h_3-h_10pp)*dotm_vHP/dotm_vHP
-    Q_Reh = (h_5-h_9)*dotm_vIP/dotm_vHP + (h_5-h_4)*dotm_vHP/dotm_vHP
 
-    Q_5g = (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP+Q_Evap_LP+Q_Eco_LP)*1e-3
-    Q_5 = 0
-    Q_2 = Q_5g
-    Q_4 = (Q_Sup_HP)*1e-3
-    Q_10pp = (Q_Sup_HP+Q_Reh)*1e-3
-    Q_10p = (Q_Sup_HP+Q_Reh+Q_Evap_HP)*1e-3
-    Q_9pp = (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP)*1e-3
-    Q_9p = (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP)*1e-3
-    Q_8pp = (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP)*1e-3
-    Q_8p = (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP+Q_Evap_LP)*1e-3
-
-
-    fig_heat_exchange = plt.figure(5)
-    fig_heat_exchange.clear()
-    plt.grid(True)
-    plt.plot([Q_4g, Q_5g], [T_4g-273.15, T_5g-273.15], 'ro-', mec='1.0')
-    plt.plot([Q_3, Q_4], [T_3-273.15, T_4-273.15], 'bo-', mec='1.0')
-    plt.plot([Q_4, Q_10pp], [T_4-273.15, T_10pp-273.15], 'bo-', mec='1.0')
-    plt.plot([Q_10pp, Q_10p], [T_10pp-273.15, T_10p-273.15], 'bo-', mec='1.0')
-    plt.plot([Q_10p, Q_9pp], [T_10p-273.15, T_9pp-273.15], 'bo-', mec='1.0')
-    plt.plot([Q_9pp, Q_9p], [T_9pp-273.15, T_9p-273.15], 'bo-', mec='1.0')
-    plt.plot([Q_9p, Q_8pp], [T_9p-273.15, T_8pp-273.15], 'bo-', mec='1.0')
-    plt.plot([Q_8pp, Q_8p], [T_8pp-273.15, T_8p-273.15], 'bo-', mec='1.0')
-    plt.plot([Q_8p, Q_2], [T_8p-273.15, T_2-273.15], 'bo-', mec='1.0')
-
-    xoffset = 100
-    yoffset = 10
-    plt.annotate('4g',         (Q_4g,T_4g-273.15),      (xoffset, T_4g-273.15+.5*yoffset))
-    plt.annotate('5g',         (Q_5g,T_5g-273.3),       (Q_5g+.5*xoffset,T_5g-273.3+yoffset))
-    plt.annotate('2',          (Q_2,T_2-273.15),        (Q_2+xoffset,T_2-273.15+yoffset))
-    plt.annotate('3\n5',       (Q_3,T_3-273.15),        (Q_3-.5*xoffset,T_3-273.15-7*yoffset))
-    plt.annotate('4',          (Q_4,T_4-273.15),        (Q_4-.5*xoffset,T_4-273.15-4*yoffset))
-    plt.annotate('10\'\'',     (Q_10pp,T_10pp-273.15),  (Q_10pp-xoffset,T_10pp-273.15-4*yoffset))
-    plt.annotate('10\'\n9\n6', (Q_10p,T_10p-273.15),    (Q_10p-1.5*xoffset,T_10p-273.15-9*yoffset))
-    plt.annotate('9\'\'',      (Q_9pp,T_9pp-273.15),    (Q_9pp-xoffset,T_9pp-273.15-4*yoffset))
-    plt.annotate('8\n9\'',     (Q_9p,T_9p-273.15),      (Q_9p-.5*xoffset,T_9p-273.15-7*yoffset))
-    plt.annotate('8\'\'',      (Q_8pp,T_8pp-273.15),    (Q_8pp-xoffset,T_8pp-273.15-4*yoffset))
-    plt.annotate('8\'',        (Q_8p,T_8p-273.15),      (Q_8p-.5*xoffset,T_8p-273.15-4*yoffset))
-
-    plt.title('Recovery boiler heat exchange')
-    plt.xlabel("Q $[kJ/kg_{vHP}]$")
-    plt.ylabel("t $[°C]$")
-    plt.tight_layout()
-
-    if savefigure:
-        fig_heat_exchange.savefig('fig_heat_exchange.png', dpi=200)
 
 
     if display:
