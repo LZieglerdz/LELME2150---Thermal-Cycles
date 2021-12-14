@@ -911,7 +911,7 @@ def GST(P_eg, P_es, options, display):
 
     ############################################################################
     # 3rd figure : T-s diagram
-    fig_Ts_diagram = plt.figure(3)
+    # fig_Ts_diagram = plt.figure(3)
     # fig_Ts_diagram.clear()
     fig_Ts_diagram = PropertyPlot('water', 'Ts', unit_system='EUR')
     fig_Ts_diagram.calc_isolines(CoolProp.iQ, num=11)
@@ -938,7 +938,7 @@ def GST(P_eg, P_es, options, display):
     plt.plot(s_51g*1e-3, T_51g-273.15, 'r.-', mec='1.0')
 
     plt.plot(s_fig,T_fig, 'ko', mec='1.0')
-         
+
     plt.annotate(text='1g',         xy=(s_1g*1e-3,T_1g-273.15),        xytext=((s_1g*1e-3+0.7e-3,T_1g-273.15)))
     plt.annotate(text='2g',         xy=(s_2g*1e-3,T_2g-273.15),        xytext=((s_2g*1e-3+0.1,T_2g-273.15)))
     plt.annotate(text='3g',         xy=(s_3g*1e-3,T_3g-273.15),        xytext=((s_3g*1e-3+0.7e-3,T_3g-273.15)))
@@ -969,7 +969,7 @@ def GST(P_eg, P_es, options, display):
 
     ############################################################################
     # 4th figure: h-s diagram
-    fig_hs_diagram = plt.figure(4)
+    # fig_hs_diagram = plt.figure(4)
     # fig_hs_diagram.clear()
     fig_hs_diagram = PropertyPlot('water', 'HS', unit_system='EUR')
     fig_hs_diagram.calc_isolines(CoolProp.iQ, num=11)
@@ -996,7 +996,7 @@ def GST(P_eg, P_es, options, display):
     plt.plot(s_51g*1e-3, h_51g*1e-3, 'r.-', mec='1.0')
 
     plt.plot(s_fig,h_fig, 'ko', mec='1.0')
-         
+
     plt.annotate(text='1g',         xy=(s_1g*1e-3,h_1g*1e-3),        xytext=((s_1g*1e-3+0.1,h_1g*1e-3-100)))
     plt.annotate(text='2g',         xy=(s_2g*1e-3,h_2g*1e-3),        xytext=((s_2g*1e-3+0.1,h_2g*1e-3)))
     plt.annotate(text='3g',         xy=(s_3g*1e-3,h_3g*1e-3),        xytext=((s_3g*1e-3+0.1,h_3g*1e-3)))
@@ -1015,7 +1015,7 @@ def GST(P_eg, P_es, options, display):
     plt.annotate(text='9\'',        xy=(s_9p*1e-3,h_9p*1e-3),        xytext=((s_9p*1e-3,h_9p*1e-3+100)))
     plt.annotate(text='9\'\'',      xy=(s_9pp*1e-3,h_9pp*1e-3),      xytext=((s_9pp*1e-3+0.1,h_9pp*1e-3-100)))
     plt.annotate(text='10\'',       xy=(s_10p*1e-3,h_10p*1e-3),      xytext=((s_10p*1e-3-0.2,h_10p*1e-3+100)))
-    plt.annotate(text='10\'\'',     xy=(s_10pp*1e-3,h_10pp*1e-3),    xytext=((s_10pp*1e-3-0.2,h_10pp*1e-3+100)))  
+    plt.annotate(text='10\'\'',     xy=(s_10pp*1e-3,h_10pp*1e-3),    xytext=((s_10pp*1e-3-0.2,h_10pp*1e-3+100)))
 
     plt.title('h-s diagram of the cycle')
     plt.xlabel("s $[kJ/kg/K]$")
