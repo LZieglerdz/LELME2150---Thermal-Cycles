@@ -962,8 +962,27 @@ def GST(P_eg, P_es, options, display):
 
     plt.plot(s_51g*1e-3, T_51g-273.15, 'r.-', mec='1.0')
 
-
     plt.plot(s_fig,T_fig, 'ko', mec='1.0')
+         
+    plt.annotate(text='1g',         xy=(s_1g*1e-3,T_1g-273.15),        xytext=((s_1g*1e-3+0.7e-3,T_1g-273.15)))
+    plt.annotate(text='2g',         xy=(s_2g*1e-3,T_2g-273.15),        xytext=((s_2g*1e-3+0.1,T_2g-273.15)))
+    plt.annotate(text='3g',         xy=(s_3g*1e-3,T_3g-273.15),        xytext=((s_3g*1e-3+0.7e-3,T_3g-273.15)))
+    plt.annotate(text='4g',         xy=(s_4g*1e-3,T_4g-273.15),        xytext=((s_4g*1e-3+0.7e-3,T_4g-273.15)))
+    plt.annotate(text='5g',         xy=(s_5g*1e-3,T_5g-273.15),        xytext=((s_5g*1e-3+0.1,T_5g-273.15)))
+    plt.annotate(text='1=2',        xy=(s_1*1e-3,T_1-273.15),          xytext=((s_1*1e-3,T_1-273.15-35)))
+    plt.annotate(text='3',          xy=(s_3*1e-3,T_3-273.15),          xytext=((s_3*1e-3,T_3-273.15+10)))
+    plt.annotate(text='4',          xy=(s_4*1e-3,T_4-273.15),          xytext=((s_4*1e-3+0.1,T_4-273.15-10)))
+    plt.annotate(text='5',          xy=(s_5*1e-3,T_5-273.15),          xytext=((s_5*1e-3,T_5-273.15+10)))
+    plt.annotate(text='6',          xy=(s_6*1e-3,T_6-273.15),          xytext=((s_6*1e-3,T_6-273.15+10)))
+    plt.annotate(text='7',          xy=(s_7*1e-3,T_7-273.15),          xytext=((s_7*1e-3,T_7-273.15)))
+    plt.annotate(text='8',          xy=(s_8*1e-3,T_8-273.15),          xytext=((s_8*1e-3+0.1,T_8-273.15-10)))
+    plt.annotate(text='8\'',        xy=(s_8p*1e-3,T_8p-273.15),        xytext=((s_8p*1e-3,T_8p-273.15+10)))
+    plt.annotate(text='8\'\'',      xy=(s_8pp*1e-3,T_8pp-273.15),      xytext=((s_8pp*1e-3,T_8pp-273.15+30)))
+    plt.annotate(text='9',          xy=(s_9*1e-3,T_9-273.15),          xytext=((s_9*1e-3+0.1,T_9-273.15-10)))
+    plt.annotate(text='9\'',        xy=(s_9p*1e-3,T_9p-273.15),        xytext=((s_9p*1e-3,T_9p-273.15+10)))
+    plt.annotate(text='9\'\'',      xy=(s_9pp*1e-3,T_9pp-273.15),      xytext=((s_9pp*1e-3,T_9pp-273.15+30)))
+    plt.annotate(text='10\'',       xy=(s_10p*1e-3,T_10p-273.15),      xytext=((s_10p*1e-3,T_10p-273.15+10)))
+    plt.annotate(text='10\'\'',     xy=(s_10pp*1e-3,T_10pp-273.15),    xytext=((s_10pp*1e-3,T_10pp-273.15+30)))
 
     plt.title('T-s diagram of the cycle')
     plt.xlabel("s $[kJ/kg/K]$")
@@ -1002,6 +1021,26 @@ def GST(P_eg, P_es, options, display):
     plt.plot(s_51g*1e-3, h_51g*1e-3, 'r.-', mec='1.0')
 
     plt.plot(s_fig,h_fig, 'ko', mec='1.0')
+         
+    plt.annotate(text='1g',         xy=(s_1g*1e-3,h_1g*1e-3),        xytext=((s_1g*1e-3+0.1,h_1g*1e-3-100)))
+    plt.annotate(text='2g',         xy=(s_2g*1e-3,h_2g*1e-3),        xytext=((s_2g*1e-3+0.1,h_2g*1e-3)))
+    plt.annotate(text='3g',         xy=(s_3g*1e-3,h_3g*1e-3),        xytext=((s_3g*1e-3+0.1,h_3g*1e-3)))
+    plt.annotate(text='4g',         xy=(s_4g*1e-3,h_4g*1e-3),        xytext=((s_4g*1e-3+0.05,h_4g*1e-3)))
+    plt.annotate(text='5g',         xy=(s_5g*1e-3,h_5g*1e-3),        xytext=((s_5g*1e-3-0.1,h_5g*1e-3+100)))
+    plt.annotate(text='1=2',        xy=(s_1*1e-3,h_1*1e-3),          xytext=((s_1*1e-3,h_1*1e-3-150)))
+    plt.annotate(text='3',          xy=(s_3*1e-3,h_3*1e-3),          xytext=((s_3*1e-3,h_3*1e-3+50)))
+    plt.annotate(text='4',          xy=(s_4*1e-3,h_4*1e-3),          xytext=((s_4*1e-3+0.1,h_4*1e-3-100)))
+    plt.annotate(text='5',          xy=(s_5*1e-3,h_5*1e-3),          xytext=((s_5*1e-3,h_5*1e-3+50)))
+    plt.annotate(text='6',          xy=(s_6*1e-3,h_6*1e-3),          xytext=((s_6*1e-3+0.1,h_6*1e-3)))
+    plt.annotate(text='7',          xy=(s_7*1e-3,h_7*1e-3),          xytext=((s_7*1e-3+0.1,h_7*1e-3)))
+    plt.annotate(text='8',          xy=(s_8*1e-3,h_8*1e-3),          xytext=((s_8*1e-3+0.1,h_8*1e-3-100)))
+    plt.annotate(text='8\'',        xy=(s_8p*1e-3,h_8p*1e-3),        xytext=((s_8p*1e-3,h_8p*1e-3+100)))
+    plt.annotate(text='8\'\'',      xy=(s_8pp*1e-3,h_8pp*1e-3),      xytext=((s_8pp*1e-3+0.1,h_8pp*1e-3-100)))
+    plt.annotate(text='9',          xy=(s_9*1e-3,h_9*1e-3),          xytext=((s_9*1e-3+0.1,h_9*1e-3-100)))
+    plt.annotate(text='9\'',        xy=(s_9p*1e-3,h_9p*1e-3),        xytext=((s_9p*1e-3,h_9p*1e-3+100)))
+    plt.annotate(text='9\'\'',      xy=(s_9pp*1e-3,h_9pp*1e-3),      xytext=((s_9pp*1e-3+0.1,h_9pp*1e-3-100)))
+    plt.annotate(text='10\'',       xy=(s_10p*1e-3,h_10p*1e-3),      xytext=((s_10p*1e-3-0.2,h_10p*1e-3+100)))
+    plt.annotate(text='10\'\'',     xy=(s_10pp*1e-3,h_10pp*1e-3),    xytext=((s_10pp*1e-3-0.2,h_10pp*1e-3+100)))  
 
     plt.title('h-s diagram of the cycle')
     plt.xlabel("s $[kJ/kg/K]$")
@@ -1009,8 +1048,6 @@ def GST(P_eg, P_es, options, display):
 
     if savefigure:
         fig_hs_diagram.savefig('fig_hs_diagram.png', dpi=200)
-
-
 
 
     if display:
@@ -1025,5 +1062,4 @@ def GST(P_eg, P_es, options, display):
     DATEX = (loss_mec,loss_rotex,loss_combex,loss_chemex,loss_transex,loss_totex,loss_condex)
     FIG = (fig_pie_en,fig_pie_ex,fig_Ts_diagram,fig_hs_diagram,fig_heat_exchange)
     out = (ETA,DATEN,DATEX,DAT,MASSFLOW,COMBUSTION,FIG)
-    # out = (ETA,DATEN,DATEX,DAT,MASSFLOW,COMBUSTION)
     return out
