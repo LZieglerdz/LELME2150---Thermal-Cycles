@@ -213,52 +213,26 @@ def getPolytropicTemp(p_in, p_out, T_in, T_out, R, eta_pi, iter, mix_comp, mix_c
 #           * x         [-]: O_x/C ratio of fuel (e.g. 0.0 in CH_4)
 #           * y         [-]: H_y/C ratio of fuel (e.g. 4.0 in CH_4)
 #
-#       o p3            [Pa]: maximum steam pressure
-#       o p4            [Pa]: reheating pressure
-#       o p_ref         [Pa]: reference pressure for exergy computation
-#       o T_ref         [K]: reference temperature for exergy computation
-#       o T_max         [K]: maximum steam temperature
-#       o T_cond_out    [K]: condenser cold outlet temperature
-#       o T_exhaust     [K]: exhaust gas temperature out of the chimney
-#       o T_pinch_sub   [K]: pinch temperature at the subcooler
-#       o T_pinch_ex    [K]: pinch temperature at heat exchangers
-#       o T_pinch_cond  [K]: pinch temperature at the condenser
-#       o T_drum        [K]: minimum drum temperature
-#       o x_6           [-]: minimum possible vapor quality after final expansion
-#       o eta_mec       [-]: shafts bearings mechanical efficiency
-#       o eta_pump      [-]: internal efficiency of the pump (see text book pp. 53)
-#       o eta_is_turb   [na]: tuple containing turbines isentropic efficiencies (see text book pp. 55)
-#           * eta_is_HP [-]: high pressure turbine isentropic efficiency
-#           * eta_is_LP [-]: low pressure turbine isentropic efficiency
-#   - display: bool to choose to plot the T-s & h-s diagrams and the energy and exergy pie charts (True or False)
+#       o p_3                [Pa]: maximum steam pressure
+#       o p_5                [Pa]: reheating pressure
+#       o T_5                [K]: reheating temperature
+#       o p_6                [Pa]: LP inlet pressure
+#       o T_6                [K]: LP inlet temperature
+#       o p_7                [Pa]: LP outlet pressure
+#       o x_7                [-]: LP outlet steam quality (condenser inlet) = minimum possible vapor quality after final expansion
+#       o p_ref              [Pa]: reference pressure for exergy computation
+#       o T_ref              [K]: reference temperature for exergy computation
+#       o T_pinch_approach   [K]: approach pinch temperature
+#       o T_pinch            [K]: pinch temperature
+#       o eta_pump           [-]: internal efficiency of the pump
+#       o eta_is_turb        [na]: tuple containing turbines isentropic efficiencies
+#           * eta_is_HP      [-]: high pressure turbine isentropic efficiency
+#           * eta_is_LP      [-]: low pressure turbine isentropic efficiency
+#   - display: bool to choose to plot the T-s & h-s diagrams and the energy and exergy pie charts and the heat exchange diagram (True or False)
 #
 # OUTPUTS: tuple containing...
 
-#   - DAT_g: tuple containing the GT cycle state data
-#      o p_g [Pa]: tuple containing the pressure at each state
-#      o T_g [T]: tuple containing the temperature at each state
-#      o h_g [J/kg]: tuple containing the enthalpy at each state
-#      o s_g [J/kg/K]: tuple containing the entropy at each state
-#      o e_g [J/kg]: tuple containing the exergy at each state
-#   - COMBUSTION: tuple containing the combustion parameters
-#      o LHV [J/kg]: the fuel Lower Heating Value
-#      o e_c [J/kg]: the fuel exergy
-#      o excess_air [-]: the excess air of the combustion
-#      o cp_gas [J/kg/K]: the flue gas specific heat capacity at the combustor outlet
-#      o gas_prop: list containing the proportion of ['CO2','H2O','N2','O2'] in the flue gas respectively
-#   - MASSFLOW_g: tuple containing the massflow rates
-#      o dot_m_a [kg/s]: mass flow rate of air
-#      o dot_m_f [kg/s]: mass flow rate of fuel
-#      o dot_m_g [kg/s]: mass flow rate of flue gas
-#   - ETA_g: tuple containing the efficiencies (see text book pp. 113-125)
-#       o eta_cyclen [-]: cycle energy efficiency
-#       o eta_toten [-]: overall energy efficiency
-#       o eta_cyclex [-]: cycle exergy efficiency
-#       o eta_totex [-]: overall exergy efficiency
-#       o eta_rotex [-]: compressor-turbine exergy efficiency
-#       o eta_combex [-]: combustion exergy efficiency
-
-#   - DAT: tuple containing the ST cycle state data (1,2,3,4,5,6,7,8,8',8",9,9',9",10,10',10")
+#   - DAT: tuple containing the cycle state data
 #      o p              [Pa]: tuple containing the pressure at each state
 #      o T              [K]: tuple containing the temperature at each state
 #      o h              [J/kg]: tuple containing the enthalpy at each state
@@ -276,7 +250,10 @@ def getPolytropicTemp(p_in, p_out, T_in, T_out, R, eta_pi, iter, mix_comp, mix_c
 #      o dot_m_f        [kg/s]: mass flow rate of fuel
 #      o dot_m_g        [kg/s]: mass flow rate of flue gas
 #      o dot_m_v        [kg/s]: mass flow rate of steam
-#   - ETA: tuple containing the efficiencies (see text book pp. 53-94)
+#      o dot_m_vLP      [kg/s]: mass flow rate of steam at the LP stage
+#      o dot_m_vIP      [kg/s]: mass flow rate of steam at the IP stage
+#      o dot_m_vHP      [kg/s]: mass flow rate of steam at the HP stage
+#   - ETA: tuple containing the efficiencies
 #       o eta_cyclen    [-]: cycle energy efficiency
 #       o eta_toten     [-]: overall energy efficiency
 #       o eta_cyclex    [-]: cycle exergy efficiency
@@ -290,8 +267,8 @@ def getPolytropicTemp(p_in, p_out, T_in, T_out, R, eta_pi, iter, mix_comp, mix_c
 #       o eta_rotex     [-]: pumps and turbines exergy efficiency
 #   - DATEN: tuple containing the energy losses
 #       o loss_mec      [W]: mechanical energy losses
-#       o loss_gen      [W]: steam generator energy losses
 #       o loss_cond     [W]: condenser energy losses
+#       o loss_chimney  [W]: chimney energy losses
 #   - DATEX: tuple containing the exergy losses
 #       o loss_mec      [W]: mechanical energy losses
 #       o loss_rotex    [W]: pumps and turbines exergy losses
@@ -303,8 +280,9 @@ def getPolytropicTemp(p_in, p_out, T_in, T_out, R, eta_pi, iter, mix_comp, mix_c
 #   - FIG: tuple containing the figures to be diplayed
 #       o fig_pie_en: pie chart of energy losses
 #       o fig_pie_ex: pie chart of exergy losses
-#       o fig_Ts_diagram: T-s diagram of the GT cycle
-#       o fig_hs_diagram: h-s diagram of the GT cycle
+#       o fig_Ts_diagram: T-s diagram
+#       o fig_hs_diagram: h-s diagram
+#       o fig_heat_exchange: recovery boiler heat exchange diagram
 def GST(P_eg, P_es, options, display):
 
     (p_1g,p_2g,p_3g,p_4g,p_5g,p_1,p_2,p_3,p_4,p_5,p_6,p_7,p_8,p_8p,p_8pp,p_9,p_9p,p_9pp,p_10p,p_10pp) = np.zeros(20)
@@ -686,9 +664,6 @@ def GST(P_eg, P_es, options, display):
     eta_condex = dotm_w*(e_1w-e_7w)/(dotm_v*(e_1-e_7))  #[-]: condenser exergy efficiency                           .
     eta_rotex =  Wm_tot/(emTg + emT -emP - emPg)                #[-]: pumps and turbines exergy efficiency  .918
 
-    ETA = (eta_cyclen,eta_toten,eta_cyclex,eta_totex,eta_gen,eta_gex,eta_combex,eta_chimnex,eta_condex,eta_transex,eta_rotex)
-
-
 
     p = (p_1g,p_2g,p_3g,p_4g,p_5g,p_1,p_2,p_3,p_4,p_5,p_6,p_7,p_8,p_8p,p_8pp,p_9,p_9p,p_9pp,p_10p,p_10pp)
     T = (T_1g,T_2g,T_3g,T_4g,T_5g,T_1,T_2,T_3,T_4,T_5,T_6,T_7,T_8,T_8p,T_8pp,T_9,T_9p,T_9pp,T_10p,T_10pp)
@@ -914,17 +889,17 @@ def GST(P_eg, P_es, options, display):
 
     xoffset = 100
     yoffset = 10
-    plt.annotate('4g',         (Q_4g,T_4g-273.15),      (xoffset, T_4g-273.15+.5*yoffset))
-    plt.annotate('5g',         (Q_5g,T_5g-273.3),       (Q_5g+.5*xoffset,T_5g-273.3+yoffset))
-    plt.annotate('2',          (Q_2,T_2-273.15),        (Q_2+xoffset,T_2-273.15+yoffset))
-    plt.annotate('3\n5',       (Q_3,T_3-273.15),        (Q_3-.5*xoffset,T_3-273.15-7*yoffset))
-    plt.annotate('4',          (Q_4,T_4-273.15),        (Q_4-.5*xoffset,T_4-273.15-4*yoffset))
-    plt.annotate('10\'\'',     (Q_10pp,T_10pp-273.15),  (Q_10pp-xoffset,T_10pp-273.15-4*yoffset))
-    plt.annotate('10\'\n9\n6', (Q_10p,T_10p-273.15),    (Q_10p-1.5*xoffset,T_10p-273.15-9*yoffset))
-    plt.annotate('9\'\'',      (Q_9pp,T_9pp-273.15),    (Q_9pp-xoffset,T_9pp-273.15-4*yoffset))
-    plt.annotate('8\n9\'',     (Q_9p,T_9p-273.15),      (Q_9p-.5*xoffset,T_9p-273.15-7*yoffset))
-    plt.annotate('8\'\'',      (Q_8pp,T_8pp-273.15),    (Q_8pp-xoffset,T_8pp-273.15-4*yoffset))
-    plt.annotate('8\'',        (Q_8p,T_8p-273.15),      (Q_8p-.5*xoffset,T_8p-273.15-4*yoffset))
+    plt.annotate(text='4g',         xy=(Q_4g,T_4g-273.15),      xytext=(xoffset, T_4g-273.15+.5*yoffset))
+    plt.annotate(text='5g',         xy=(Q_5g,T_5g-273.3),       xytext=(Q_5g+.5*xoffset,T_5g-273.3+yoffset))
+    plt.annotate(text='2',          xy=(Q_2,T_2-273.15),        xytext=(Q_2+xoffset,T_2-273.15+yoffset))
+    plt.annotate(text='3\n5',       xy=(Q_3,T_3-273.15),        xytext=(Q_3-.5*xoffset,T_3-273.15-7*yoffset))
+    plt.annotate(text='4',          xy=(Q_4,T_4-273.15),        xytext=(Q_4-.5*xoffset,T_4-273.15-4*yoffset))
+    plt.annotate(text='10\'\'',     xy=(Q_10pp,T_10pp-273.15),  xytext=(Q_10pp-xoffset,T_10pp-273.15-4*yoffset))
+    plt.annotate(text='10\'\n9\n6', xy=(Q_10p,T_10p-273.15),    xytext=(Q_10p-1.5*xoffset,T_10p-273.15-9*yoffset))
+    plt.annotate(text='9\'\'',      xy=(Q_9pp,T_9pp-273.15),    xytext=(Q_9pp-xoffset,T_9pp-273.15-4*yoffset))
+    plt.annotate(text='8\n9\'',     xy=(Q_9p,T_9p-273.15),      xytext=(Q_9p-.5*xoffset,T_9p-273.15-7*yoffset))
+    plt.annotate(text='8\'\'',      xy=(Q_8pp,T_8pp-273.15),    xytext=(Q_8pp-xoffset,T_8pp-273.15-4*yoffset))
+    plt.annotate(text='8\'',        xy=(Q_8p,T_8p-273.15),      xytext=(Q_8p-.5*xoffset,T_8p-273.15-4*yoffset))
 
     plt.title('Recovery boiler heat exchange')
     plt.xlabel("Q $[kJ/kg_{vHP}]$")
@@ -1060,6 +1035,7 @@ def GST(P_eg, P_es, options, display):
     MASSFLOW = (dotm_a,dotm_f,dotm_g,dotm_v, dotm_vLP, dotm_vIP, dotm_vHP)
     DATEN = (loss_mec,loss_cond,loss_chimney)
     DATEX = (loss_mec,loss_rotex,loss_combex,loss_chemex,loss_transex,loss_totex,loss_condex)
+    ETA = (eta_cyclen,eta_toten,eta_cyclex,eta_totex,eta_gen,eta_gex,eta_combex,eta_chimnex,eta_condex,eta_transex,eta_rotex)
     FIG = (fig_pie_en,fig_pie_ex,fig_Ts_diagram,fig_hs_diagram,fig_heat_exchange)
     out = (ETA,DATEN,DATEX,DAT,MASSFLOW,COMBUSTION,FIG)
     return out
