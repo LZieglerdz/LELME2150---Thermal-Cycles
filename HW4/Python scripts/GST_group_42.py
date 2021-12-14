@@ -51,7 +51,7 @@ air_conc = [N2_conc,O2_conc,CO2_conc,H2O_conc]
 Mm   = [Mm_N2,Mm_O2,Mm_CO2,Mm_H2O]
 Mm_air = np.dot(Mm, air_conc)
 
-savefigure = True
+savefigure = False
 
 def print_red(str):
     print('\033[31m %s \033[0m' %str)
@@ -225,9 +225,8 @@ def getPolytropicTemp(p_in, p_out, T_in, T_out, R, eta_pi, iter, mix_comp, mix_c
 #       o T_pinch_approach   [K]: approach pinch temperature
 #       o T_pinch            [K]: pinch temperature
 #       o eta_pump           [-]: internal efficiency of the pump
-#       o eta_is_turb        [na]: tuple containing turbines isentropic efficiencies
-#           * eta_is_HP      [-]: high pressure turbine isentropic efficiency
-#           * eta_is_LP      [-]: low pressure turbine isentropic efficiency
+#       o eta_is_HP          [-]: high pressure turbine isentropic efficiency
+#       o eta_is_LP          [-]: low pressure turbine isentropic efficiency
 #   - display: bool to choose to plot the T-s & h-s diagrams and the energy and exergy pie charts and the heat exchange diagram (True or False)
 #
 # OUTPUTS: tuple containing...
@@ -293,38 +292,10 @@ def GST(P_eg, P_es, options, display):
     (x_1g,x_2g,x_3g,x_4g,x_5g,x_1,x_2,x_3,x_4,x_5,x_6,x_7,x_8,x_8p,x_8pp,x_9,x_9p,x_9pp,x_10p,x_10pp) = np.zeros(20)
 
     # Process input variables (p.167 book)--------------------------------------------------
-    T_ref = 288.15;
-    p_ref = 1e+5;
-    T_1g = 15+273.15;   # Gas turbine air intake temperature [K]
-    p_1g = 100e3;       # [Pa]
-    T_3g = 1250+273.15; # Gas turbine flue gas temperature [K]
-    r = 15;             # Compression ratio [-]
-    eta_pi_c = 0.9;
-    eta_pi_t = 0.9;
-    k_cc = 1-0.05;
-    k_mec = 0.015;
-
-    x = 0; y = 4; # CH4
-
-    T_pinch_approach = 50;        # Approach pinch temperature [K]
-    T_pinch = 10;                 # Pinch temperature [K]
-    eta_pump = 0.85;              # Extraction pump (1->2) efficiency [-]
-    eta_is_HP = 0.92;             # HP turbine isentropic efficiency [-]
-    eta_is_LP = 0.90;             # LP turbine isentropic efficiency [-]
-    p_3 = 11e6;                   # HP inlet pressure [Pa] (Maximum steam pressure)
-    p_5 = 2.8e6;                  # IP inlet pressure [Pa] (Reaheating pressure)
-    T_5 = 565+273.15;             # IP inlet temperature [K] (Reheating temperature)
-    p_6 = 0.4e6;                  # LP inlet pressure [Pa]
-    T_6 = 318+273.15;             # LP inlet temperature [K]
-    p_7 = 6e3;                    # LP outlet pressure [Pa]
-    x_7 = 0.95;                   # LP outlet steam quality (condenser inlet) = minimum possible vapor quality after final expansion [-]
-    # T_1 = T_cond_out ?
-    # T_pinch_cond ?
-
+    comb,T_ref,p_ref,T_1g,p_1g,T_3g,r,eta_pi_c,eta_pi_t,k_cc,k_mec,p_3,p_5,T_5,p_6,T_6,p_7,x_7,T_pinch_approach,T_pinch,eta_pump,eta_is_HP,eta_is_LP = options
+    x,y = comb
+    
     #===Ref. State for steam turbine============================================
-
-    T_ref = T_ref   #[K]
-    p_ref = p_ref   #[Pa]
 
     # Dmolar = CP.PropsSI("Dmolar", "T", 273.15+36.16, "P", 6000, 'Water')
     # CP.set_reference_state('Water', T_ref, Dmolar, 0, 0)
@@ -377,10 +348,6 @@ def GST(P_eg, P_es, options, display):
     cp_3g = getMeanCp(p_2g,p_3g,T_2g,T_3g, R_f, comp, flue_conc_mass)
     h_3g = h_2g + cp_3g*(T_3g-T_2g)
 
-    # h_3g = h_2g - flue_conc_mass[-1]*( CP.PropsSI('H','P',p_3g,'Q',1, comp[-1]) - CP.PropsSI('H','P',p_2g,'Q',0, comp[-1]) )
-    # for i in np.arange(len(comp)):
-    #     h_3g += flue_conc_mass[i]*( CP.PropsSI('H','P',p_3g,'T',T_3g, comp[i]) - CP.PropsSI('H','P',p_2g,'T',T_2g, comp[i]) )
-    # print(h_3g*1e-3)
     cp_3g = (h_3g - h_2g)/(T_3g-T_2g)
     s_3g = s_2g + cp_3g*np.log(T_3g/T_2g) - R_f*np.log(p_3g/p_2g)
     e_3g = (h_3g - h_1g) - T_1g*(s_3g - s_1g)
@@ -578,18 +545,8 @@ def GST(P_eg, P_es, options, display):
     e_1w = exergy(CP.PropsSI('H','P',p_ref,'T',T_ref,'Water'),CP.PropsSI('S','P',p_ref,'T',T_ref,'Water'))
     e_7w = exergy(CP.PropsSI('H','P',p_ref,'T',T_7,'Water'),CP.PropsSI('S','P',p_ref,'T',T_7,'Water'))
 
-    # print("m_a = ", dotm_a)
-    # print("m_g = ", dotm_g)
-    # print("m_CH4 = ", dotm_f)
-    # print("m_vLP = ", dotm_vLP)
-    # print("m_vIP = ", dotm_vIP)
-    # print("m_vHP = ", dotm_vHP)
-    # print(50*'-')
-
-
     h_5g = h_4g - (dotm_vLP/dotm_g)*(h_6-h_2) - (dotm_vIP + dotm_vHP)*(h_5-h_2)/dotm_g
     T_5g = CP.PropsSI('T','P',p_5g,'H',h_5g*gas_prop[3],'Water')
-    # cp_5g = getMeanCp(p_5g,p_5g,T_4g,T_5g, R_f, comp, flue_conc_mass)
     cp_5g = (h_5g-h_4g)/(T_5g-T_4g)
     s_5g = s_4g + cp_5g*np.log(T_5g/T_4g) - R_f*np.log(p_5g/p_4g)
     e_5g = (h_5g - h_1g) - T_1g*(s_5g - s_1g)
@@ -848,7 +805,7 @@ def GST(P_eg, P_es, options, display):
     ############################################################################
     # 5th figure: heat exchange diagram
     Q_4g = 0
-    Q_g = (h_4g-h_5g)*dotm_g/dotm_vHP # /!\ Not right value!
+    Q_g = (h_4g-h_5g)*dotm_g/dotm_vHP
     Q_3 = 0
     Q_Eco_LP = (h_8p-h_2)*dotm_v/dotm_vHP
     Q_Evap_LP = (h_8pp-h_8p)*dotm_vLP/dotm_vHP
@@ -874,7 +831,7 @@ def GST(P_eg, P_es, options, display):
     Q_8p = (Q_Sup_HP+Q_Reh+Q_Evap_HP+Q_Sup_LP_HT+Q_Sup_IP+Q_Eco_HP+Q_Evap_IP+Q_Sup_LP_LT+Q_Eco_IP+Q_Evap_LP)*1e-3
 
 
-    fig_heat_exchange = plt.figure(5)
+    fig_heat_exchange = plt.figure(3)
     # fig_heat_exchange.clear()
     plt.grid(True)
     plt.plot([Q_4g, Q_5g], [T_4g-273.15, T_5g-273.15], 'ro-', mec='1.0')
@@ -911,7 +868,7 @@ def GST(P_eg, P_es, options, display):
 
     ############################################################################
     # 3rd figure : T-s diagram
-    # fig_Ts_diagram = plt.figure(3)
+    #fig_Ts_diagram = plt.figure(4)
     # fig_Ts_diagram.clear()
     fig_Ts_diagram = PropertyPlot('water', 'Ts', unit_system='EUR')
     fig_Ts_diagram.calc_isolines(CoolProp.iQ, num=11)
@@ -969,7 +926,7 @@ def GST(P_eg, P_es, options, display):
 
     ############################################################################
     # 4th figure: h-s diagram
-    # fig_hs_diagram = plt.figure(4)
+    #fig_hs_diagram = plt.figure(5)
     # fig_hs_diagram.clear()
     fig_hs_diagram = PropertyPlot('water', 'HS', unit_system='EUR')
     fig_hs_diagram.calc_isolines(CoolProp.iQ, num=11)
@@ -1036,6 +993,8 @@ def GST(P_eg, P_es, options, display):
     DATEN = (loss_mec,loss_cond,loss_chimney)
     DATEX = (loss_mec,loss_rotex,loss_combex,loss_chemex,loss_transex,loss_totex,loss_condex)
     ETA = (eta_cyclen,eta_toten,eta_cyclex,eta_totex,eta_gen,eta_gex,eta_combex,eta_chimnex,eta_condex,eta_transex,eta_rotex)
-    FIG = (fig_pie_en,fig_pie_ex,fig_Ts_diagram,fig_hs_diagram,fig_heat_exchange)
+    FIG = (fig_pie_en,fig_pie_ex,fig_heat_exchange, fig_Ts_diagram,fig_hs_diagram)
     out = (ETA,DATEN,DATEX,DAT,MASSFLOW,COMBUSTION,FIG)
     return out
+
+
